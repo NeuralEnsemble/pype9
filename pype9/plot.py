@@ -1,18 +1,19 @@
+from builtins import str
+from builtins import next
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import quantities as pq
-import logging
-from itertools import izip
-
-logger = logging.getLogger('PyPe9')
+from pype9.utils.logging import logger
 
 
-def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
-         regime_alpha=0.05, regime_linestyle=':'):
+def plot(seg, dims=(20, 16), resolution=300, save=None, show=True,
+         regime_alpha=0.05, regime_linestyle=':', title=None):
+    if title is None:
+        title = 'PyPe9 Simulation Output'
     num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
     fig, axes = plt.subplots(num_subplots, 1)
-    fig.suptitle('PyPe9 Simulation Output')
+    fig.suptitle(title)
     fig.set_figwidth(dims[0])
     fig.set_figheight(dims[1])
     # Set the dimension of the figure
@@ -42,18 +43,16 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
             line, = plt.plot(signal.times, signal, label=label)
             legend.append(line)
         # Plot regime epochs (if present)
-        for epocharray in seg.epocharrays:
-            # Map labels to colours
-            labels = set(epocharray.labels)
-            # Remove the mode epoch
-            mode = mode_epoch(epocharray)
-            labels.remove(mode)
-            label_colours = dict((l, plt.gca()._get_lines.get_next_color())
-                                 for l in labels)
-            label_colours[mode] = None
-            for label, start, duration in izip(epocharray.labels,
-                                               epocharray.times,
-                                               epocharray.durations):
+        for epochs in seg.epochs:
+            # Generate colours for each regime
+            labels = sort_epochs_by_duration(epochs)
+            # Make the 'mode' regime transparent
+            label_colours = OrderedDict([(labels[0], None)])
+            for label in labels[1:]:
+                label_colours[label] = plt.gca()._get_lines.get_next_color()
+            for label, start, duration in zip(epochs.labels,
+                                              epochs.times,
+                                              epochs.durations):
                 if label_colours[label] is not None:
                     end = start + duration
                     plt.axvspan(start, end, facecolor=label_colours[label],
@@ -62,7 +61,7 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
                                 color='gray', linewidth=0.5)
                     plt.axvline(end, linestyle=regime_linestyle, color='gray',
                                 linewidth=0.5)
-            for label, colour in label_colours.iteritems():
+            for label, colour in label_colours.items():
                 if colour is None:
                     colour = 'white'
                 legend.append(
@@ -83,14 +82,9 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
         plt.show()
 
 
-def mode_epoch(epocharray):
+def sort_epochs_by_duration(epocharray):
     total_durations = defaultdict(lambda: 0.0 * pq.s)
-    for label, duration in izip(epocharray.labels,
-                                epocharray.durations):
+    for label, duration in zip(epocharray.labels,
+                               epocharray.durations):
         total_durations[label] += duration
-    max_duration = 0.0
-    max_label = None
-    for label, total_duration in total_durations.iteritems():
-        if total_duration > max_duration:
-            max_label = label
-    return max_label
+    return sorted(total_durations, key=lambda l: -total_durations[l])

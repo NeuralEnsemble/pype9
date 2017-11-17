@@ -1,15 +1,12 @@
-import logging
-import os.path
+from builtins import object
 from nineml import units as un
 import ctypes
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
 from pyNN.neuron.simulator import initializer as pyNN_initializer
 from pype9.simulate.common.simulation import Simulation as BaseSimulation
-from pype9.simulate.neuron.cells.code_gen import CodeGenerator
+from pype9.simulate.neuron.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
-
-logger = logging.getLogger('PyPe9')
 
 
 class Simulation(BaseSimulation):
@@ -20,6 +17,7 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'Neuron'
+    CodeGenerator = CodeGenerator
 
     class _DummyID(object):
 
@@ -131,9 +129,9 @@ class Simulation(BaseSimulation):
         # but there is a problem loading the library with ctypes before it has
         # been loaded by the required mod files, so it is delayed until
         # initialisation
-        libninemlnrn = ctypes.CDLL(
-            os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
-        libninemlnrn.nineml_seed_gsl_rng(self.dynamics_seed)
+        libninemlnrn = ctypes.CDLL(self.code_generator.libninemlnrn_so)
+        libninemlnrn.nineml_seed_gsl_rng.arg_types = [ctypes.c_int()]
+        libninemlnrn.nineml_seed_gsl_rng(int(self.dynamics_seed))
 
     @classmethod
     def quit(cls):

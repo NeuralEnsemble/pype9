@@ -1,39 +1,43 @@
 from __future__ import division
-import os
-import logging
-import operator
-from itertools import chain
-from operator import xor
-import cPickle as pkl
-from abc import ABCMeta, abstractmethod
-import sympy
-from sympy import sympify
-import numpy
-from numpy import array, sum, abs, argmin, log10, nonzero
-import quantities as pq
-import diophantine
-from nineml import units as un
-from nineml.user.component import Quantity
-from nineml.abstraction import Expression
-from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
-import atexit
-from pype9.exceptions import Pype9RuntimeError
-from pype9.utils import classproperty
-from fractions import gcd
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next  # @IgnorePep8
+from builtins import zip  # @IgnorePep8
+from builtins import str  # @IgnorePep8
+from past.builtins import basestring  # @IgnorePep8
+import operator  # @IgnorePep8
+from itertools import chain  # @IgnorePep8
+from operator import xor  # @IgnorePep8
+from abc import ABCMeta, abstractmethod  # @IgnorePep8
+import sympy  # @IgnorePep8
+from sympy import sympify  # @IgnorePep8
+import numpy  # @IgnorePep8
+from numpy import array, sum, abs, argmin, log10, nonzero  # @IgnorePep8
+import quantities as pq  # @IgnorePep8
+import diophantine  # @IgnorePep8
+from nineml import units as un  # @IgnorePep8
+from nineml.user.component import Quantity  # @IgnorePep8
+from nineml.abstraction import Expression  # @IgnorePep8
+from nineml.abstraction.dynamics.visitors.queriers import (  # @IgnorePep8
+    DynamicsDimensionResolver)
+from pype9.exceptions import Pype9RuntimeError  # @IgnorePep8
+from pype9.utils.misc import classproperty  # @IgnorePep8
+try:
+    from math import gcd  # @IgnorePep8
+except ImportError:
+    from fractions import gcd
+from functools import reduce  # @IgnorePep8
+from future.utils import with_metaclass  # @IgnorePep8
+from pype9.utils.logging import logger  # @IgnorePep8
 numpy.seterr(all='raise')
 
 
-logger = logging.getLogger('PyPe9')
-
-
-class UnitHandler(DynamicsDimensionResolver):
+class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
     """
     Base class for simulator-specific "unit assigners", which map dynamics
     class dimensions onto a set of "basis" unit compounds that the simulator
     expects
     """
-
-    __metaclass__ = ABCMeta
 
     _pq_si_to_dim = {pq.UnitMass: 'm', pq.UnitLength: 'l', pq.UnitTime: 't',
                      pq.UnitCurrent: 'i', pq.UnitLuminousIntensity: 'j',
@@ -188,7 +192,7 @@ class UnitHandler(DynamicsDimensionResolver):
         # into the provided dimension, and test to see if they are constant
         with_scalars = [(x, numpy.unique(dim_vector[mask] /
                                          numpy.asarray(d)[mask]))
-                        for d, x in cls.cache.iteritems()
+                        for d, x in cls.cache.items()
                         if ((numpy.asarray(d) != 0) == mask).all()]
         matches = [(u, int(s[0])) for u, s in with_scalars
                    if len(s) == 1 and float(s[0]).is_integer()]
@@ -200,11 +204,11 @@ class UnitHandler(DynamicsDimensionResolver):
         if matches and float(matches[0][1]).is_integer():
             base_x, scalar = matches[0]
             scalar = int(scalar)
-            num_compounds = len(nonzero(x[len(cls.basis):])[0])
+            num_compounds = len(nonzero(base_x[len(cls.basis):])[0])
             assert num_compounds <= 1, (
-                "Multiple compound indices matched (x={})".format(x))
-            assert xor(x[:len(cls.basis)].any(), num_compounds != 0), (
-                "Mix of basis vectors and compounds (x={})".format(x))
+                "Multiple compound indices matched (x={})".format(base_x))
+            assert xor(base_x[:len(cls.basis)].any(), num_compounds != 0), (
+                "Mix of basis vectors and compounds (x={})".format(base_x))
             x = base_x * scalar
         # If there is not a direct relationship to a basis vector or special
         # compound, project the dimension onto the basis vectors, finding
@@ -245,7 +249,7 @@ class UnitHandler(DynamicsDimensionResolver):
         num_str, den_str = [
             mult_symbol.join(
                 cls.unit_name_map[u] + (pow_symbol + str(int(p))
-                                        if p > 1 else '')
+                                           if p > 1 else '')
                 for u, p in num_den)
             for num_den in (numerator, denominator)]
         if num_str:
@@ -292,8 +296,8 @@ class UnitHandler(DynamicsDimensionResolver):
                     else:
                         # FIXME: Should be not supported error??
                         raise NotImplementedError(
-                            "RandomDistributionValue quantities cannot be scaled at this "
-                            "time ({})".format(qty))
+                            "RandomDistributionValue quantities cannot be "
+                            "scaled at this time ({})".format(qty))
             except AttributeError:
                 return qty  # Float or int value quantity
         scaled = value * cls.scalar(units)
@@ -331,7 +335,7 @@ class UnitHandler(DynamicsDimensionResolver):
                 unit_name = unit_name[1:]  # strip leading underscore
             powers = dict(
                 (cls._pq_si_to_dim[type(u)], p)
-                for u, p in qty.units.simplified._dimensionality.iteritems())
+                for u, p in qty.units.simplified._dimensionality.items())
             dimension = un.Dimension(unit_name + 'Dimension', **powers)
             units = un.Unit(unit_name, dimension=dimension,
                             power=int(log10(float(qty.units.simplified))))
@@ -343,7 +347,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return Quantity(float(qty), units)
 
     @classmethod
-    def _load_basis_matrices_and_cache(cls, basis, compounds, directory):
+    def _init_matrices_and_cache(cls, basis, compounds):
         """
         Creates matrix corresponding to unit basis and loads cache of
         previously calculated mappings from dimensions onto this basis.
@@ -353,32 +357,14 @@ class UnitHandler(DynamicsDimensionResolver):
         assert any(u.dimension == un.time for u in basis), (
             "No pure time dimension found in basis units")
         # Get matrix of basis unit dimensions
-        A = array([list(b.dimension) for b in basis]).T
-        # Get cache path from file path of subclass
-        cache_path = os.path.join(directory, cls._CACHE_FILENAME)
-        try:
-            with open(cache_path) as f:
-                cache, loaded_A = pkl.load(f)
-                # If the dimension matrix has been changed since the cache was
-                # generated, reset the cache
-                if (loaded_A != A).all():
-                    cache = {}
-        except:
-            logger.info("Building unit conversion cache in file '{}'"
-                        .format(cache_path))
-            cache = cls._init_cache(basis, compounds)
-        def save_cache():  # @IgnorePep8
-            try:
-                with open(cache_path, 'w') as f:
-                    pkl.dump((cache, A), f)
-            except IOError:
-                logger.warning("Could not save unit conversion cache to file "
-                               "'{}'".format(cache_path))
-        atexit.register(save_cache)
+        cls._A = array([list(b.dimension) for b in basis]).T
+        logger.info("Initialising unit conversion cache")
+        cls._cache = cls._init_cache(basis, compounds)
+
         # The lengths in terms of SI dimension bases of each of the unit
         # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
-        return A, cache, cache_path, si_lengths
+        return cls._A, cls._cache, si_lengths
 
     @classmethod
     def _init_cache(cls, basis, compounds):
@@ -404,9 +390,6 @@ class UnitHandler(DynamicsDimensionResolver):
         Removes the existing cache of unit projections and creates a new one in
         its place
         """
-        # Removed saved version of cache
-        if os.path.exists(cls.cache_path):
-            os.remove(cls.cache_path)
         # Create a new cache with the specified units entered into it
         cls.cache = cls._init_cache(cls.basis, cls.compounds)
 
@@ -465,7 +448,7 @@ class UnitHandler(DynamicsDimensionResolver):
         try:
             dims = self._dims[sym]
         except KeyError:
-            element = self._find_element(sym)
+            element = self.find_element(sym)
             try:
                 dims = self._flatten(element.rhs)[1]
             except AttributeError:
@@ -496,7 +479,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, dims
 
     def _flatten_matching(self, expr, **kwargs):  # @UnusedVariable
-        arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
+        arg_exprs, arg_dims = list(zip(*[self._flatten(a) for a in expr.args]))
         scaled_expr = type(expr)(*arg_exprs)
         return scaled_expr, arg_dims[0]
 

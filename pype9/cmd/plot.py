@@ -5,7 +5,8 @@ Neo_ files but it also includes handling of Pype9-specific annotations, such as
 regime transitions.
 """
 from argparse import ArgumentParser
-from ._utils import existing_file, logger  # @UnusedImport
+from pype9.utils.arguments import existing_file
+from pype9.utils.logging import logger  # @UnusedImport
 
 
 def argparser():
@@ -18,7 +19,7 @@ def argparser():
     parser.add_argument('--dims', type=int, nargs=2, default=(10, 8),
                         metavar=('WIDTH', 'HEIGHT'),
                         help="Dimensions of the plot")
-    parser.add_argument('--hide', action='store_true',
+    parser.add_argument('--hide', action='store_true', default=False,
                         help="Whether to show the plot or not")
     parser.add_argument('--resolution', type=float, default=300.0,
                         help="Resolution of the figure when it is saved")
@@ -28,9 +29,11 @@ def argparser():
 def run(argv):
     import neo
     from pype9.exceptions import Pype9UsageError
-    from pype9.plot import plot
-
     args = argparser().parse_args(argv)
+    if args.hide:
+        import matplotlib  # @IgnorePep8
+        matplotlib.use('Agg')  # Set to use Agg so DISPLAY is not required
+    from pype9.plot import plot  # @IgnorePep8
 
     segments = neo.PickleIO(args.filename).read()
     if len(segments) > 1:

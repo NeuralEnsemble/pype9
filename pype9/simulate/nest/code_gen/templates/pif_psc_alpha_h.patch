@@ -1,0 +1,35 @@
+--- nest/examples/MyModule/pif_psc_alpha.h	2017-09-22 21:07:56.000000000 +1000
++++ nest-2.10/examples/MyModule/pif_psc_alpha.h	2017-09-22 21:11:33.000000000 +1000
+@@ -23,23 +23,19 @@
+ #ifndef PIF_PSC_ALPHA_H
+ #define PIF_PSC_ALPHA_H
+ 
+-// Includes from nestkernel:
+
++#include "nest.h"
+-#include "nest_types.h"
+
+ 
+
+@@ -154,7 +145,7 @@
+   void calibrate();
+ 
+   //! Take neuron through given time interval
+-  void update( nest::Time const&, const long, const long );
++  void update( nest::Time const&, const nest::long_t, const nest::long_t );
+ 
+
+      */
+     State_( const Parameters_& );
+
+    */
+   struct Buffers_
+   {
+    * @{
+    */
+   //! Read out the real membrane potential
+-  double
++  nest::double_t
+   get_V_m_() const
+   {
+     return S_.V_m;

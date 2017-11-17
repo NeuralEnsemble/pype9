@@ -3,6 +3,9 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 from __future__ import absolute_import, division
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import os.path
 import re
 from itertools import combinations
@@ -14,11 +17,12 @@ import nest
 from numpy import exp
 try:
     import pylab as plt
-except ImportError:
+except (ImportError, RuntimeError):
     plt = None
 from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
+from pype9.simulate.nest import CodeGenerator as NESTCodeGenerator
 from pype9.simulate.neuron.units import UnitHandler as UnitHandlerNEURON
 from pype9.simulate.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.simulate.nest import (
@@ -30,9 +34,7 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
-import logging
-
-logger = logging.getLogger('PyPe9')
+from pype9.utils.logging import logger
 
 
 class Comparer(object):
@@ -76,7 +78,7 @@ class Comparer(object):
                  nest_translations=None, neuron_build_args=None,
                  nest_build_args=None, min_delay=0.1, device_delay=0.1,
                  max_delay=10.0, extra_mechanisms=None,
-                 extra_point_process=None, build_name=None,
+                 extra_point_process=None,
                  auxiliary_states=None):
         if nineml_model is not None and not simulators:
             raise Pype9RuntimeError(
@@ -102,7 +104,6 @@ class Comparer(object):
         self.initial_states = (initial_states
                                if initial_states is not None else {})
         self.initial_regime = initial_regime
-        self.build_name = build_name
         self.auxiliary_states = (auxiliary_states
                                  if auxiliary_states is not None else [])
         self.input_signal = input_signal
@@ -134,7 +135,8 @@ class Comparer(object):
         if self.simulate_nest:
             with NESTSimulation(dt=self.dt * un.ms, seed=nest_rng_seed,
                                 min_delay=self.min_delay * un.ms,
-                                max_delay=self.max_delay * un.ms) as sim:
+                                max_delay=self.max_delay * un.ms,
+                                device_delay=self.device_delay * un.ms) as sim:
                 if 'nest' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'nest')
@@ -168,7 +170,8 @@ class Comparer(object):
         for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
             if len(signal1):
                 logger.debug("Comparing {} with {}".format(name1, name2))
-                avg_diff = (numpy.sum(numpy.abs(signal1 - signal2)) /
+                avg_diff = (numpy.sum(numpy.abs(numpy.ravel(signal1) -
+                                                numpy.ravel(signal2))) /
                             len(signal1))
             else:
                 avg_diff = 0.0
@@ -212,8 +215,7 @@ class Comparer(object):
             CellMetaClass = NESTCellMetaClass
         else:
             assert False
-        Cell = CellMetaClass(model, name=self.build_name,
-                             **self.build_args[simulator])
+        Cell = CellMetaClass(model, **self.build_args[simulator])
         self.nml_cells[simulator] = Cell(properties,
                                          regime_=self.initial_regime,
                                          **self.initial_states)
@@ -255,8 +257,8 @@ class Comparer(object):
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
             if varname in self.specific_params:
-                specific_value = UnitHandlerNEURON.to_pq_quantity(
-                    Quantity(value, prop.units)) / (100 * (pq.um ** 2))
+                specific_value = (Quantity(value, prop.units) /
+                                  (100 * un.um ** 2))
                 value = UnitHandlerNEURON.scale_value(specific_value)
             else:
                 value = UnitHandlerNEURON.scale_value(
@@ -276,7 +278,7 @@ class Comparer(object):
                         setattr(self.nrn_cell, varname, value)
                     except AttributeError:
                         setattr(self.nrn_cell_sec, varname, value)
-        for name, value in self.initial_states.iteritems():
+        for name, value in self.initial_states.items():
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -299,13 +301,13 @@ class Comparer(object):
         # Specify current injection
         if self.input_signal is not None:
             _, signal = self.input_signal
+            times = numpy.asarray(signal.times.rescale(pq.ms))
             self._nrn_iclamp = neuron.h.IClamp(0.5, sec=self.nrn_cell_sec)
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12
             self._nrn_iclamp.amp = 0.0
-            self._nrn_iclamp_amps = neuron.h.Vector(pq.Quantity(signal, 'nA'))
-            self._nrn_iclamp_times = neuron.h.Vector(pq.Quantity(signal.times,
-                                                                 'ms'))
+            self._nrn_iclamp_amps = neuron.h.Vector(signal.rescale(pq.nA))
+            self._nrn_iclamp_times = neuron.h.Vector(times)
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
@@ -317,7 +319,8 @@ class Comparer(object):
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
             self._vstim = neuron.h.VecStim()
-            self._vstim_times = neuron.h.Vector(pq.Quantity(train, 'ms'))
+            times = numpy.asarray(train.rescale(pq.ms)) - 1.0
+            self._vstim_times = neuron.h.Vector(times)
             self._vstim.play(self._vstim_times)
             target = (self.extra_point_process
                       if self.extra_point_process is not None
@@ -351,11 +354,11 @@ class Comparer(object):
             port_name, signal = self.input_signal
             generator = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': pq.Quantity(signal, 'pA'),
-                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
-                                     self.device_delay * pq.ms),
-                 'start': float(pq.Quantity(signal.t_start, 'ms')),
-                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+                {'amplitude_values': numpy.ravel(pq.Quantity(signal, 'pA')),
+                 'amplitude_times': numpy.ravel(numpy.asarray(
+                     signal.times.rescale(pq.ms))) - self.device_delay,
+                 'start': float(signal.t_start.rescale(pq.ms)),
+                 'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(generator, self.nest_cell,
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
@@ -369,8 +372,8 @@ class Comparer(object):
                 scale = 1.0
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
-            spike_times = (pq.Quantity(signal, 'ms') +
-                           (pq.ms - self.device_delay * pq.ms))
+            spike_times = (numpy.asarray(signal.rescale(pq.ms)) -
+                           self.device_delay)
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
@@ -384,16 +387,17 @@ class Comparer(object):
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
                                     if receptor_types else 0),
-                                   'delay': float(self.device_delay),
+                                   'delay': self.device_delay,
                                    'weight': float(weight)})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(
             self.nest_multimeter,
             {'record_from': [self.nest_state_variable]})
-        nest.Connect(self.nest_multimeter, self.nest_cell)
+        nest.Connect(self.nest_multimeter, self.nest_cell,
+                     syn_spec={'delay': self.device_delay})
         trans_states = {}
-        for name, qty in self.initial_states.iteritems():
+        for name, qty in self.initial_states.items():
             try:
                 varname, scale = self.nest_translations[name]
                 qty = qty * scale
@@ -410,7 +414,7 @@ class Comparer(object):
 
     def _plot_NEST(self):
         nest_v = self._get_NEST_signal()
-        plt.plot(pq.Quantity(nest_v.times, 'ms'), pq.Quantity(nest_v, 'mV'))
+        plt.plot(nest_v.times.rescale(pq.ms), nest_v.rescale(pq.mV))
 
     def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording(self.state_variable)
@@ -460,24 +464,35 @@ class Comparer(object):
             return numpy.array(self.rec_t), numpy.array(self.recs[varname])
 
 
-def input_step(port_name, amplitude, start_time, duration, dt):
-    num_preceding = int(numpy.floor(start_time / dt))
-    num_remaining = int(numpy.ceil((duration - start_time) / dt))
+def input_step(port_name, amplitude, start_time, duration, dt, delay):
+    start_time = pq.Quantity(start_time, 'ms')
+    duration = pq.Quantity(duration, 'ms')
+    dt = pq.Quantity(dt, 'ms')
+    delay = pq.Quantity(delay, 'ms')
+    start_minus_delay = start_time - delay
+    num_preceding = int(numpy.floor(start_minus_delay / dt))
+    num_remaining = int(numpy.ceil((duration - start_minus_delay) / dt))
     amplitude = float(pq.Quantity(amplitude, 'nA'))
     signal = neo.AnalogSignal(
         numpy.concatenate((numpy.zeros(num_preceding),
-                           numpy.ones(num_remaining) * amplitude)),
-        sampling_period=dt * pq.ms, units='nA', time_units='ms')
+                           numpy.ones(num_remaining) * float(amplitude))),
+        sampling_period=dt, units='nA', time_units='ms',
+        t_start=delay)
     return (port_name, signal)
 
 
 def input_freq(port_name, freq, duration, weight, offset=None):
-    isi = 1 / float(pq.Quantity(freq, 'kHz'))
+    freq = pq.Quantity(freq, 'kHz')
+    duration = pq.Quantity(duration, 'ms')
+    isi = 1 / freq
     if offset is None:
-        isi = offset
+        offset = isi
+    else:
+        offset = pq.Quantity(offset, 'ms')
     train = neo.SpikeTrain(
         numpy.arange(offset, duration, isi),
-        units='ms', t_stop=duration * pq.ms)
+        units='ms', t_stop=duration,
+        t_start=offset)
     return (port_name, train, weight)
 
 
@@ -538,8 +553,8 @@ class ReferenceBrunel2000(object):
          J_ex, J_in, p_rate) = self.parameters(case, order)
 
         if override_input is not None:
-            print "changing poisson rate from {} to {}".format(p_rate,
-                                                               override_input)
+            print("changing poisson rate from {} to {}".format(p_rate,
+                                                               override_input))
             p_rate = override_input
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
@@ -581,7 +596,7 @@ class ReferenceBrunel2000(object):
                      "excitatory")
 
         if connections is not None:
-            for (p1_name, p2_name), conns in connections.iteritems():
+            for (p1_name, p2_name), conns in connections.items():
                 if p1_name == 'Exc':
                     p1 = nodes_exc
                     syn = 'excitatory'
@@ -713,8 +728,7 @@ _compare_re = re.compile(r"Average error between ([\w\-]+) and ([\w\-]+): "
 _error_re = re.compile(r"(\w+)Error:")
 
 
-test_data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'test',
-                             '_data')
+test_cache = os.path.join(NESTCodeGenerator().base_dir, '..', 'unittest-cache')
 
 
 class DummyTestCase(object):
@@ -736,7 +750,7 @@ class DummyTestCase(object):
             if msg is None:
                 msg = '{} and {} are not equal'.format(repr(first),
                                                        repr(second))
-            print msg
+            print(msg)
 
     def assertAlmostEqual(self, first, second, places=None, msg=None):
         if places is None:
@@ -745,37 +759,37 @@ class DummyTestCase(object):
             if msg is None:
                 msg = '{} and {} are not equal'.format(repr(first),
                                                        repr(second))
-            print msg
+            print(msg)
 
     def assertLess(self, first, second, msg=None):
         if first >= second:
             if msg is None:
                 msg = '{} is not less than {}'.format(repr(first),
                                                       repr(second))
-            print msg
+            print(msg)
 
     def assertLessEqual(self, first, second, msg=None):
         if first > second:
             if msg is None:
                 msg = '{} is not less than or equal to {}'.format(
                     repr(first), repr(second))
-            print msg
+            print(msg)
 
     def assertNotEqual(self, first, second, msg=None):
         if first == second:
             if msg is None:
                 msg = '{} is equal to {}'.format(
                     repr(first), repr(second))
-            print msg
+            print(msg)
 
     def assertTrue(self, statement, msg=None):
         if not statement:
             if msg is None:
                 msg = '{} is not true'.format(repr(statement))
-            print msg
+            print(msg)
 
     def assertNotTrue(self, statement, msg=None):
         if statement:
             if msg is None:
                 msg = '{} is true'.format(repr(statement))
-            print msg
+            print(msg)

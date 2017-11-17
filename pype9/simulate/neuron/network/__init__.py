@@ -1,1 +1,2 @@
-from .base import Network
+from .base import Network, ComponentArray, Selection, ConnectionGroup
+from .cell_wrapper import PyNNCellWrapperMetaClass

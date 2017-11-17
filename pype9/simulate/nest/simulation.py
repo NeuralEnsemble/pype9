@@ -3,6 +3,7 @@ from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pyNN.nest import (
     setup as pyNN_setup, run as pyNN_run, state as pyNN_state, end as pyNN_end)
 from pype9.exceptions import Pype9UsageError
+from .code_gen import CodeGenerator
 
 
 class Simulation(BaseSimulation):
@@ -10,6 +11,7 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'NEST'
+    CodeGenerator = CodeGenerator
 
     def __init__(self, *args, **kwargs):
         self._device_delay = kwargs.get('device_delay', None)
@@ -18,10 +20,18 @@ class Simulation(BaseSimulation):
 
     @property
     def device_delay(self):
-        if self.min_delay is not None:
-            return self.min_delay
+        if self._device_delay is None:
+            if self.min_delay is not None:
+                delay = self.min_delay
+            else:
+                delay = self.dt * 2
         else:
-            return self.dt * 2
+            delay = self._device_delay
+        return delay
+
+    @property
+    def device_delay_ms(self):
+        return float(self.device_delay.in_units(un.ms))
 
     def _run(self, t_stop, callbacks=None, **kwargs):  # @UnusedVariable
         """

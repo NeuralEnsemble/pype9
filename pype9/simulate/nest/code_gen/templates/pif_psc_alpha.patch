@@ -1,0 +1,52 @@
+--- nest/examples/MyModule/pif_psc_alpha.cpp	2017-09-22 21:07:56.000000000 +1000
++++ nest-2.10/examples/MyModule/pif_psc_alpha.cpp	2017-09-22 21:11:33.000000000 +1000
+@@ -20,34 +20,26 @@
+  *
+  */
+ 
+
+
+-#include "kernel_manager.h"
++#include "network.h"
+-#include "dictutils.h"
+
+ 
+ void
+ mynest::pif_psc_alpha::update( Time const& slice_origin,
+-  const long from_step,
+-  const long to_step )
++  const nest::long_t from_step,
++  const nest::long_t to_step )
+ {
+   for ( long lag = from_step; lag < to_step; ++lag )
+   {
+@@ -259,7 +243,7 @@
+       // send spike, and set spike time in archive.
+       set_spiketime( Time::step( slice_origin.get_steps() + lag + 1 ) );
+       SpikeEvent se;
+-      kernel().event_delivery_manager.send( *this, se, lag );
++      network()->send( *this, se, lag );
+     }
+ 
+     // add synaptic input currents for this step
+@@ -278,9 +262,7 @@
+ {
+   assert( e.get_delay() > 0 );
+ 
+-  B_.spikes.add_value(
+-    e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() ),
+-    e.get_weight() );
++  B_.spikes.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), e.get_weight() );
+ }
+ 
+ void
+@@ -289,8 +271,7 @@
+   assert( e.get_delay() > 0 );
+ 
+   B_.currents.add_value(
+-    e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() ),
+-    e.get_weight() * e.get_current() );
++    e.get_rel_delivery_steps( network()->get_slice_origin() ), e.get_weight() * e.get_current() );
+ }
+ 
+ // Do not move this function as inline to h-file. It depends on

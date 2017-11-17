@@ -9,10 +9,9 @@ import nest
 from pype9.simulate.common.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
-from pype9.exceptions import Pype9BuildOptionMismatchException
+from pype9.exceptions import Pype9BuildMismatchError
 import pyNN.standardmodels
 from pype9.simulate.nest.cells import CellMetaClass
-from ..units import UnitHandler
 from logging import Logger
 
 
@@ -23,7 +22,6 @@ class PyNNCellWrapper(BasePyNNCellWrapper,
                       pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
-    UnitHandler = UnitHandler
 
     def __init__(self, **parameters):
         BasePyNNCellWrapper.__init__(self)
@@ -47,28 +45,21 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     """
 
     loaded_celltypes = {}
-    UnitHandler = UnitHandler
 
-    def __new__(cls, name, component_class, default_properties,
+    def __new__(cls, component_class, default_properties,
                 initial_state, initial_regime, **kwargs):  # @UnusedVariable
+        # Get the basic Pype9 cell class
+        model = CellMetaClass(component_class=component_class)
         try:
-            celltype, build_options = cls.loaded_celltypes[
-                (component_class.name, component_class.url)]
-            if build_options != kwargs:
-                raise Pype9BuildOptionMismatchException()
-        except (KeyError, Pype9BuildOptionMismatchException):
-            dct = {'model': CellMetaClass(component_class=component_class,
-                                          name=name, **kwargs)}
-            dct['nest_name'] = {"on_grid": name, "off_grid": name}
-            dct['nest_model'] = name
+            celltype = cls.loaded_celltypes[model.name]
+        except (KeyError, Pype9BuildMismatchError):
+            dct = {'model': model}
+            dct['nest_name'] = {"on_grid": model.name, "off_grid": model.name}
+            dct['nest_model'] = model.name
             dct['default_properties'] = default_properties
             dct['initial_state'] = initial_state
             dct['initial_regime'] = initial_regime
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
-                cls, name, (PyNNCellWrapper,), dct)
-            # If the url where the celltype is defined is specified save the
-            # celltype to be retried later
-            if component_class.url is not None:
-                cls.loaded_celltypes[(name, component_class.url)] = (celltype,
-                                                                     kwargs)
+                cls, model.name, (PyNNCellWrapper,), dct)
+            cls.loaded_celltypes[model.name] = celltype
         return celltype

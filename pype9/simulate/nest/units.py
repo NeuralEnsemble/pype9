@@ -1,4 +1,3 @@
-import os.path
 from nineml import units as un
 from pype9.simulate.common.units import UnitHandler as BaseUnitHandler
 
@@ -12,9 +11,8 @@ class UnitHandler(BaseUnitHandler):
                      un.pF: 'pF', un.um: 'um', un.nS: 'nS', un.K: 'K',
                      un.cd: 'cd'}
 
-    (A, cache,
-     cache_path, si_lengths) = BaseUnitHandler._load_basis_matrices_and_cache(
-        basis, compounds, os.path.dirname(__file__))
+    (A, cache, si_lengths) = BaseUnitHandler._init_matrices_and_cache(
+        basis, compounds)
 
     def _units_for_code_gen(self, units):
         return self.compound_to_units_str(

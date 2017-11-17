@@ -117,8 +117,7 @@ recordings will be Neo_ format.
 
 .. code-block:: python
 
-    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich',
-                               build_dir='.9build')
+    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
                           u=14 * un.mV / un.ms)
@@ -133,8 +132,7 @@ retrieved using ``regime_epochs``
 
 .. code-block:: python
 
-    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich',
-                               build_dir='.9build')
+    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
                           u=14 * un.mV / un.ms)
@@ -163,8 +161,7 @@ States and parameters can be accessed and set using the attributes of the
 
 .. code-block:: python
 
-    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich',
-                               build_dir='.9build')
+    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4)
         sim.run(500.0 * un.ms)

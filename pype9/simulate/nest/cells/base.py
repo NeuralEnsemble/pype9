@@ -8,35 +8,25 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import os.path
-import logging
 import numpy
 import neo
 import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from nineml import units as un
-from nineml.abstraction.ports import EventPort, AnalogPort
-from .code_gen import CodeGenerator, REGIME_VARNAME
+from ..code_gen import CodeGenerator
 from pype9.simulate.nest.simulation import Simulation
 from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
-from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import (
     Pype9UsageError, Pype9Unsupported9MLException)
-from pype9.utils import add_lib_path
-
-
-logger = logging.getLogger('PyPe9')
+from pype9.utils.logging import logger
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
 class Cell(base.Cell):
-
-    UnitHandler = UnitHandler
-    Simulation = Simulation
 
     def __init__(self, *properties, **kwprops):
         self._flag_created(False)
@@ -54,9 +44,10 @@ class Cell(base.Cell):
         nest.SetStatus(self._cell, varname, value)
 
     def _set_regime(self):
-        nest.SetStatus(self._cell, REGIME_VARNAME, self._regime_index)
+        nest.SetStatus(self._cell, self.code_generator.REGIME_VARNAME,
+                       self._regime_index)
 
-    def record(self, port_name, interval=None):
+    def record(self, port_name, interval=None, **kwargs):  # @UnusedVariable @IgnorePep8
         # Create dictionaries for storing local recordings. These are not
         # created initially to save memory if recordings are not required or
         # handled externally
@@ -87,20 +78,24 @@ class Cell(base.Cell):
                 'multimeter', 1, {"interval": interval})
             nest.SetStatus(recorder, {'record_from': [variable_name]})
             nest.Connect(
-                recorder, self._cell, syn_spec={'delay': self._device_delay})
+                recorder, self._cell,
+                syn_spec={'delay': self.device_delay_ms})
 
     def record_regime(self, interval=None):
         self._initialize_local_recording()
         if interval is None:
             interval = Simulation.active().dt
         interval = float(interval.in_units(un.ms))
-        self._recorders[REGIME_VARNAME] = recorder = nest.Create(
+        self._recorders[
+            self.code_generator.REGIME_VARNAME] = recorder = nest.Create(
             'multimeter', 1, {"interval": interval})
-        nest.SetStatus(recorder, {'record_from': [REGIME_VARNAME]})
+        nest.SetStatus(recorder,
+                       {'record_from': [self.code_generator.REGIME_VARNAME]})
         nest.Connect(
-            recorder, self._cell, syn_spec={'delay': self._device_delay})
+            recorder, self._cell,
+            syn_spec={'delay': self.device_delay_ms})
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
@@ -115,13 +110,16 @@ class Cell(base.Cell):
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
-        t_stop = UnitHandler.to_pq_quantity(t_stop)
+        if t_start is None:
+            t_start = self.unit_handler.to_pq_quantity(self._t_start)
+        t_start = pq.Quantity(t_start, 'ms')
+        t_stop = self.unit_handler.to_pq_quantity(t_stop)
         if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             spikes = nest.GetStatus(
                 self._recorders[port_name], 'events')[0]['times']
-            data = neo.SpikeTrain(spikes, t_start=t_start, t_stop=t_stop,
-                                  name=port_name, units=pq.ms)
+            data = neo.SpikeTrain(
+                self._trim_spike_train(spikes * pq.ms, t_start),
+                t_start=t_start, t_stop=t_stop, name=port_name)
         else:
             port_name = self.build_name(port_name)
             events, interval = nest.GetStatus(self._recorders[port_name],
@@ -130,22 +128,25 @@ class Cell(base.Cell):
                 port = self._nineml.component_class.port(port_name)
             except NineMLNameError:
                 port = self._nineml.component_class.state_variable(port_name)
-            unit_str = UnitHandler.dimension_to_unit_str(
+            unit_str = self.unit_handler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
             variable_name = self.build_name(port_name)
+            signal = self._trim_analog_signal(events[variable_name],
+                                              t_start, interval * pq.ms)
             data = neo.AnalogSignal(
-                events[variable_name], sampling_period=interval * pq.ms,
+                signal, sampling_period=interval * pq.ms,
                 t_start=t_start, units=unit_str, name=port_name)
         return data
 
     def _regime_recording(self):
-        events, interval = nest.GetStatus(self._recorders[REGIME_VARNAME],
-                                              ('events', 'interval'))[0]
+        events, interval = nest.GetStatus(
+            self._recorders[self.code_generator.REGIME_VARNAME],
+            ('events', 'interval'))[0]
         return neo.AnalogSignal(
-            events[REGIME_VARNAME],
+            events[self.code_generator.REGIME_VARNAME],
             sampling_period=interval * pq.ms, units='dimensionless',
-            t_start=UnitHandler.to_pq_quantity(self._t_start),
-            name=REGIME_VARNAME)
+            t_start=self.unit_handler.to_pq_quantity(self._t_start),
+            name=self.code_generator.REGIME_VARNAME)
 
     def build_name(self, varname):
         # Get mapped port name if port corresponds to membrane voltage
@@ -177,23 +178,24 @@ class Cell(base.Cell):
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
-            spike_times = numpy.asarray(
-                pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
+            spike_times = (numpy.asarray(signal.rescale(pq.ms)) -
+                           self.device_delay_ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
-                        spike_times < (1 + self._device_delay))))
+                        spike_times <
+                        self.device_delay_ms)))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': list(spike_times)})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
-                        'delay': self._device_delay}
+                        'delay': self.device_delay_ms}
             self._check_connection_properties(port_name, properties)
             if len(properties) > 1:
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                syn_spec['weight'] = self.UnitHandler.scale_value(
+                syn_spec['weight'] = self.unit_handler.scale_value(
                     properties[0].quantity)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
@@ -203,17 +205,25 @@ class Cell(base.Cell):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
+            t_start = (float(signal.t_start.rescale(pq.ms)) -
+                       self.device_delay_ms)
+            if t_start <= 0.0:
+                raise Pype9UsageError(
+                    "Start time of signal played into port '{}' ({}) must "
+                    "be greater than device delay ({})".format(
+                        port_name, signal.t_start, self.device_delay))
+            step_current_params = {
+                 'amplitude_values': list(
+                    numpy.ravel(pq.Quantity(signal, 'pA'))),
+                 'amplitude_times': list(numpy.ravel(numpy.asarray(
+                     signal.times.rescale(pq.ms))) - self.device_delay_ms),
+                 'start': t_start,
+                 'stop': float(signal.t_stop.rescale(pq.ms))}
             self._inputs[port_name] = nest.Create(
-                'step_current_generator', 1,
-                {'amplitude_values': list(
-                    numpy.asarray(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.asarray(pq.Quantity(
-                     signal.times - self._device_delay * pq.ms, 'ms'))),
-                 'start': float(pq.Quantity(signal.t_start, 'ms')),
-                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+                'step_current_generator', 1, step_current_params)
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
-                'delay': self._device_delay})
+                'delay': self.device_delay_ms})
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
@@ -237,7 +247,7 @@ class Cell(base.Cell):
             The connection properties of the event port
         """
         if delay is None:
-            delay = self._device_delay
+            delay = self.device_delay
         if properties is None:
             properties = []
         delay = float(delay.in_units(un.ms))
@@ -264,7 +274,7 @@ class Cell(base.Cell):
             elif properties:
                 self._check_connection_properties(receive_port_name,
                                                   properties)
-                syn_spec['weight'] = self.UnitHandler.scale_value(
+                syn_spec['weight'] = self.unit_handler.scale_value(
                     properties[0].quantity)
             nest.Connect(sender._cell, self._cell, syn_spec=syn_spec)
         elif receive_port.communicates == 'analog':
@@ -282,23 +292,17 @@ class Cell(base.Cell):
                                   "Pype9->NEST at this stage.")
 
     @property
-    def _device_delay(self):
-        return float(Simulation.active().device_delay.in_units(un.ms))
+    def device_delay(self):
+        return Simulation.active().device_delay
+
+    @property
+    def device_delay_ms(self):
+        return Simulation.active().device_delay_ms
 
 
 class CellMetaClass(base.CellMetaClass):
 
-    _built_types = {}
+    _built_types = {}  # Stores previously created types for reuse
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
-
-    @classmethod
-    def load_libraries(cls, name, install_dir):
-        lib_dir = os.path.join(install_dir, 'lib', 'nest')
-        add_lib_path(lib_dir)
-        # Add module install directory to NEST path
-        nest.sli_run(
-            '({}) addpath'.format(os.path.join(install_dir, 'share', 'nest',
-                                               'sli')))
-        # Install nest module
-        nest.Install(name + 'Module')
+    Simulation = Simulation

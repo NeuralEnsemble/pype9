@@ -5,6 +5,10 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import next
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from collections import namedtuple, defaultdict
 from itertools import chain
 import quantities as pq
@@ -53,20 +57,13 @@ class Network(object):
         A 9ML-Python model of a network (or Document containing
         populations and projections for 9MLv1) or a URL referring to a 9ML
         model.
-    build_mode : str
-        The strategy used to build and compile the model. Can be one of
-        ::class::BaseCodeGenerator.BUILD_MODE_OPTIONS
-    build_dir : str (directory path)
-        The directory in which to build the simulator-native code. If None
-        a build directory is generated.
     """
 
     # Name given to the "cell" component of the cell dynamics + linear synapse
     # dynamics multi-dynamics
     CELL_COMP_NAME = 'cell'
 
-    def __init__(self, nineml_model, build_mode='lazy', build_dir=None,
-                 **kwargs):
+    def __init__(self, nineml_model, build_mode='lazy', **kwargs):
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network(
                 name=os.path.splitext(os.path.basename(nineml_model))[0])
@@ -85,20 +82,18 @@ class Network(object):
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
-        code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
-        for name, comp_array in flat_comp_arrays.iteritems():
-            if build_dir is None:
-                array_build_dir = code_gen.get_build_dir(
-                    self.nineml.url, name, group=self.nineml.name)
-            else:
-                array_build_dir = os.path.join(build_dir, name)
+        # Add build args to distinguish models built for this network as
+        # opposed to other networks
+        build_url = kwargs.pop('build_url', nineml_model.url)
+        build_version = nineml_model.name + kwargs.pop('build_version', '')
+        for name, comp_array in flat_comp_arrays.items():
             self._component_arrays[name] = self.ComponentArrayClass(
-                comp_array, build_mode=build_mode, build_dir=array_build_dir,
-                **kwargs)
+                comp_array, build_mode=build_mode,
+                build_url=build_url, build_version=build_version, **kwargs)
         self._selections = {}
         # Build the PyNN Selections
-        for selection in flat_selections.itervalues():
+        for selection in flat_selections.values():
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
             self._selections[selection.name] = self.SelectionClass(
@@ -113,7 +108,7 @@ class Network(object):
                     " using 'resample_connectivity' before constructing "
                     "network")
             self._connection_groups = {}
-            for name, conn_group in flat_conn_groups.iteritems():
+            for name, conn_group in flat_conn_groups.items():
                 try:
                     source = self._component_arrays[conn_group.source.name]
                 except KeyError:
@@ -141,17 +136,17 @@ class Network(object):
     @property
     def component_arrays(self):
         "Iterate through component arrays"
-        return self._component_arrays.itervalues()
+        return iter(self._component_arrays.values())
 
     @property
     def connection_groups(self):
         "Iterate through connection_groups"
-        return self._connection_groups.itervalues()
+        return iter(self._connection_groups.values())
 
     @property
     def selections(self):
         "Iterate through selections"
-        return self._selections.itervalues()
+        return iter(self._selections.values())
 
     def component_array(self, name):
         """
@@ -215,15 +210,15 @@ class Network(object):
 
     @property
     def component_array_names(self):
-        return self._component_arrays.keys()
+        return list(self._component_arrays.keys())
 
     @property
     def connection_group_names(self):
-        return self._connection_groups.keys()
+        return list(self._connection_groups.keys())
 
     @property
     def selection_names(self):
-        return self._selections.keys()
+        return list(self._selections.keys())
 
     def save_connections(self, output_dir):
         """
@@ -231,7 +226,7 @@ class Network(object):
 
         @param output_dir:
         """
-        for conn_grp in self.connection_groups.itervalues():
+        for conn_grp in self.connection_groups.values():
             if isinstance(conn_grp.synapse_type,
                           pyNN.standardmodels.synapses.ElectricalSynapse):
                 attributes = 'weight'
@@ -241,7 +236,7 @@ class Network(object):
                 output_dir, conn_grp.label + '.proj'), format='list',
                 gather=True)
 
-    def record(self, variable):
+    def record(self, variable, t_start=None):  # @UnusedVariable
         """
         Record variable from complete network
         """
@@ -262,7 +257,7 @@ class Network(object):
             not file_prefix.endswith('.') and
               not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
-        for comp_array in self.component_arrays.itervalues():
+        for comp_array in self.component_arrays.values():
             # @UndefinedVariable
             comp_array.write_data(file_prefix + comp_array.name + '.pkl',
                                   **kwargs)
@@ -285,7 +280,8 @@ class Network(object):
             pc.__class__(
                 sender_name=role2name[pc.sender_role],
                 receiver_name=role2name[pc.receiver_role],
-                send_port=pc.send_port_name, receive_port=pc.receive_port_name)
+                send_port_name=pc.send_port_name,
+                receive_port_name=pc.receive_port_name)
             for pc in projection_model.port_connections
             if (pc.sender_role in ('plasticity', 'response') and
                 pc.receiver_role in ('plasticity', 'response')))
@@ -310,17 +306,17 @@ class Network(object):
         port_connections = list(chain(
             (pc.__class__(sender_role=pc.sender_role,
                           receiver_role='synapse',
-                          send_port=pc.send_port_name,
-                          receive_port=append_namespace(
+                          send_port_name=pc.send_port_name,
+                          receive_port_name=append_namespace(
                               pc.receive_port_name,
                               role2name[pc.receiver_role]))
              for pc in receive_conns),
             (pc.__class__(sender_role='synapse',
                           receiver_role=pc.receiver_role,
-                          send_port=append_namespace(
+                          send_port_name=append_namespace(
                               pc.send_port_name,
                               role2name[pc.sender_role]),
-                          receive_port=pc.receive_port_name)
+                          receive_port_name=pc.receive_port_name)
              for pc in send_conns),
             (pc for pc in projection_model.port_connections
              if (pc.sender_role in ('pre', 'post') and
@@ -359,7 +355,17 @@ class Network(object):
             # All port connections between post-synaptic cell and linear
             # synapses and port exposures to pre-synaptic cell
             internal_conns = []
-            exposures = set()
+            exposures = []
+
+            def add_exposures(exposures_to_add):
+                """
+                Adds exposures to a "set" of exposures. If 9ML objects were
+                hashable could use a 'set'.
+                """
+                for pe in exposures_to_add:
+                    if pe not in exposures:
+                        exposures.append(pe)
+
             synapses = []
             connection_property_sets = []
             # FIXME: There has to be a way of avoiding this name clash
@@ -395,7 +401,7 @@ class Network(object):
                                                               proj.name))
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
-                    sub_components[proj.name] = synapse
+                    sub_components[proj.name] = synapse.clone()
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
@@ -408,16 +414,22 @@ class Network(object):
                     # synaptic cell cannot be flattened into a single component
                     # of a multi- dynamics object so an individual synapses
                     # must be created for each connection.
+                    synapse_conns = [
+                        pc.append_namespace_from_roles(
+                            {'post': cls.CELL_COMP_NAME,
+                             'pre': cls.CELL_COMP_NAME,
+                             'synapse': proj.name}) for pc in post_conns]
                     synapses.append(SynapseProperties(proj.name, synapse,
-                                                      post_conns))
+                                                      synapse_conns))
                     # Add exposures to the post-synaptic cell for connections
                     # from the synapse
-                    exposures.update(
-                        chain(*(pc.expose_ports({'post': cls.CELL_COMP_NAME})
-                                for pc in post_conns)))
+                    add_exposures(chain(*(
+                        pc.expose_ports({'post': cls.CELL_COMP_NAME})
+                        for pc in post_conns)))
                 # Add exposures for connections to/from the pre synaptic cell
-                exposures.update(
-                    chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
+                add_exposures(
+                    chain(*(pc.expose_ports(role2name)
+                            for pc in pre_conns)))
                 role2name['pre'] = cls.CELL_COMP_NAME
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
@@ -425,7 +437,7 @@ class Network(object):
                 # Not required after transition to version 2 syntax
                 synapse, proj_conns = cls._flatten_synapse(proj)
                 # Add send and receive exposures to list
-                exposures.update(chain(*(
+                add_exposures(chain(*(
                     pc.expose_ports({'pre': cls.CELL_COMP_NAME})
                     for pc in proj_conns)))
             # Add all cell ports as multi-component exposures that aren't
@@ -436,15 +448,16 @@ class Network(object):
                  if pc.sender_name == cls.CELL_COMP_NAME),
                 (pc.receive_port_name for pc in internal_conns
                  if pc.receiver_name == cls.CELL_COMP_NAME)))
-            exposures.update(
+            add_exposures(
                 BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name + '_cell', sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=exposures)
+                port_connections=internal_conns,
+                port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
-                dynamics_properties, synapses_properties=synapses,
+                dynamics_properties, synapse_propertiess=synapses,
                 connection_property_sets=connection_property_sets)
             array_name = pop.name
             component_arrays[array_name] = ComponentArray9ML(
@@ -452,10 +465,10 @@ class Network(object):
         selections = {}
         for sel in network_model.selections:
             selections[sel.name] = Selection9ML(
-                sel.name, Concatenate9ML(*(component_arrays[p.name]
-                                           for p in sel.populations)))
+                sel.name, Concatenate9ML(component_arrays[p.name]
+                                           for p in sel.populations))
         arrays_and_selections = dict(
-            chain(component_arrays.iteritems(), selections.iteritems()))
+            chain(iter(component_arrays.items()), iter(selections.items())))
         # Create ConnectionGroups from each port connection in Projection
         for proj in network_model.projections:
             _, proj_conns = cls._flatten_synapse(proj)
@@ -501,7 +514,7 @@ class Network(object):
                     arrays_and_selections[proj.pre.name],
                     arrays_and_selections[proj.post.name],
                     source_port=ns_port_conn.send_port_name,
-                    destination_port=ns_port_conn.receive_port_name,
+                    destination_port=(ns_port_conn.receive_port_name),
                     connectivity=connectivity,
                     delay=delay)
                 connection_groups[conn_group.name] = conn_group
@@ -516,31 +529,31 @@ class Network(object):
         """
         component_class = dynamics_properties.component_class
         varying_params = set(
-            component_class.parameter(p.name)
+            component_class.parameter(p.name).id
             for p in dynamics_properties.properties
             if p.value.nineml_type != 'SingleValue')
         # Get list of ports refereneced (either directly or indirectly) by
         # time derivatives and on-conditions
-        not_permitted = set(p.name for p in component_class.required_for(
+        not_permitted = set(p.id for p in component_class.required_for(
             chain(component_class.all_time_derivatives(),
                   component_class.all_on_conditions())).parameters)
         # If varying params intersects parameters that are referenced in time
         # derivatives they can not be redefined as connection parameters
         if varying_params & not_permitted:
             raise Pype9UnflattenableSynapseException()
-        conn_params = defaultdict(set)
+        conn_params = defaultdict(dict)
         for on_event in component_class.all_on_events():
-            on_event_params = set(component_class.required_for(
-                on_event.state_assignments).parameters)
-            conn_params[on_event.src_port_name] |= (varying_params &
-                                                    on_event_params)
+            for param in component_class.required_for(
+                    on_event.state_assignments).parameters:
+                if param.id in varying_params:
+                    conn_params[on_event.src_port_name][param.id] = param
         return [
             ConnectionPropertySet(
                 append_namespace(prt, namespace),
                 [Property(append_namespace(p.name, namespace),
                           dynamics_properties.property(p.name).quantity)
-                 for p in params])
-            for prt, params in conn_params.iteritems() if params]
+                 for p in params.values()])
+            for prt, params in conn_params.items()]
 
 #             raise NotImplementedError(
 #                 "Cannot convert population '{}' to component array as "
@@ -581,7 +594,7 @@ class ComponentArray(object):
         dynamics_properties = nineml_model.dynamics_properties
         dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
-            name=nineml_model.name, component_class=dynamics,
+            component_class=dynamics,
             default_properties=dynamics_properties,
             initial_state=list(dynamics_properties.initial_values),
             initial_regime=dynamics_properties.initial_regime,
@@ -645,13 +658,13 @@ class ComponentArray(object):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             try:
-                spike_trains = Sequence(pq.Quantity(signal, 'ms') -
+                spike_trains = Sequence(signal.rescale(pq.ms) -
                                         self._min_delay * pq.ms)
                 source_size = 1
             except ValueError:  # Assume multiple signals
                 spike_trains = []
                 for spike_train in signal:
-                    spike_train = (pq.Quantity(spike_train, 'ms') -
+                    spike_train = (spike_train.rescale(pq.ms) -
                                    self._min_delay * pq.ms)
                     if any(spike_train <= 0.0):
                         raise Pype9RuntimeError(
@@ -694,10 +707,10 @@ class ComponentArray(object):
 #                 'step_current_generator', 1,
 #                 {'amplitude_values': pq.Quantity(signal, 'pA'),
 #                  'amplitude_times': (
-#                     pq.Quantity(signal.times, 'ms') -
+#                     signal.times.rescale(pq.ms) -
 #                     controller.device_delay * pq.ms),
-#                  'start': float(pq.Quantity(signal.t_start, 'ms')),
-#                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+#                  'start': float(signal.t_start.rescale(pq.ms)),
+#                  'stop': float(signal.t_stop.rescale(pq.ms))})
 #             nest.Connect(self._inputs[port_name], self._cell,
 #                          syn_spec={
 #                              "receptor_type": self._receive_ports[port_name],
@@ -751,7 +764,7 @@ class ComponentArray(object):
             communicates = port.communicates
         return communicates, port.name
 
-    def record(self, port_name):
+    def record(self, port_name, t_start=None):
         """
         Records the port or state variable
 
@@ -761,7 +774,7 @@ class ComponentArray(object):
             Name of the port to record
         """
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Returns the recorded data for the given port name
 
@@ -782,11 +795,16 @@ class ComponentArray(object):
         communicates, _ = self._get_port_details(port_name)
         if communicates == 'event':
             for st in pyNN_data.spiketrains:
+                # FIXME: At some point we need to be able to specify multiple
+                # event outputs
                 if st.annotations:
+                    if t_start is not None:
+                        st = st[st > t_start]
                     recording.spiketrains.append(st)
         else:
             for asig in pyNN_data.analogsignals:
-                if asig.annotations:
+                # FIXME: Not sure if this will work
+                if asig.annotations['name'] == port_name:
                     recording.analogsignals.append(asig)
         return recording
 
@@ -821,6 +839,10 @@ class Selection(object):
         self._nineml = nineml_model
         self._component_arrays = dict(
             (ca.name, ca) for ca in component_arrays)
+        try:
+            assert(self._component_arrays)
+        except:
+            raise
         self.PyNNAssemblyClass.__init__(
             self, *component_arrays, label=nineml_model.name)
 
@@ -834,7 +856,7 @@ class Selection(object):
 
     @property
     def component_arrays(self):
-        return self._component_arrays.itervalues()
+        return iter(self._component_arrays.values())
 
     def component_array(self, name):
         return self._component_arrays[name]
@@ -845,12 +867,13 @@ class Selection(object):
 
     @property
     def component_array_names(self):
-        return self._component_arrays.iterkeys()
+        return iter(self._component_arrays.keys())
 
     def synapse(self, name):
         try:
-            synapses = set(ca.nineml.dynamics_properties.synapse(name)
-                           for ca in self.component_arrays)
+            synapses = set(
+                ca.nineml.dynamics_properties.synapse_properties(name)
+                for ca in self.component_arrays)
         except NineMLNameError:
             raise NineMLNameError(
                 "Could not return synapse '{}' because it is missing from "
@@ -860,7 +883,10 @@ class Selection(object):
             raise Pype9RuntimeError(
                 "'{}' varies ({}) between component arrays in '{}' Selection"
                 .format(name, ', '.join(str(s) for s in synapses), self.name))
-        return next(iter(synapses))  # Return the only synapse
+        try:
+            return next(iter(synapses))  # Return the only synapse
+        except:
+            raise
 
     def __repr__(self):
         return "Selection('{}', component_arrays=('{}')".format(

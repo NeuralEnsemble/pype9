@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 from pyNN.parameters import Sequence
 from pyNN.random import RandomDistribution
 from nineml.values import SingleValue, ArrayValue, RandomDistributionValue

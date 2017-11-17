@@ -1,8 +1,11 @@
 language: python
-python:
-  - "2.7"
-sudo: false
+sudo: True
 dist: trusty
+matrix:
+  include:
+    - python: 2.7
+    - python: 3.5
+    - python: 3.6
 addons:
   apt:
     packages:
@@ -13,34 +16,26 @@ addons:
       - libreadline6-dev
       - libncurses5-dev
       - libgsl0-dev
-      - python-all-dev
+      - python-dev
+      - python3-dev
       - python-numpy
       - python-scipy
+      - python3-numpy
+      - python3-scipy
       - openmpi-bin
       - libopenmpi-dev
       - inkscape
       - libhdf5-serial-dev
+      - libyaml-dev
 install:
-  - pip install cython
-  - source ci/install_neuron.sh
-  - source ci/install_nest.sh
-  - pip install git+git://github.com/python-quantities/python-quantities.git@master
-  - pip install git+git://github.com/tclose/nineml-python.git@serialization
-  - pip install git+git://github.com/tclose/nineml-catalog.git@merging_with_master
+  - install/nest.sh 2.14.0
+  - install/neuron.sh tag-1665alpha
+  - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
+  - pip install git+git://github.com/tclose/nineml-catalog.git@python3
+  - pip install git+git://github.com/tclose/Diophantine.git@master
   - pip install -r requirements.txt
-  - pip install --upgrade git+git://github.com/sympy/sympy.git@master
   - pip install coveralls
-  - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
-  - CC=mpicc ./manual_compile.sh
-  - popd
 script:
-  - nosetests test --with-coverage --cover-package=pype9
+  - nosetests test/unittests --with-coverage --cover-package=pype9
 after_success:
   - coveralls
-cache:
-  directories:
-    - $HOME/nest-2.10.0
-    - $HOME/nrn-7.4
-    - $HOME/build/nest-2.10.0
-    - $HOME/build/nrn-7.4
-    - $HOME/.cache/pip

@@ -1,0 +1,17 @@
+extern "C" int {{component_name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
+    int status;
+
+    // cast the node ptr to an object of the proper type
+    assert(pnode);
+    {{component_name}} & vnode =  *(reinterpret_cast<{{component_name}}*>(pnode));
+
+    N_Vector y1 = vnode.B_.y1;
+
+    status = {{component_name}}_dynamics (t, y, y1, pnode);
+
+    {% for i in range(component_class.num_state_variables) %}
+    ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}});
+    {% endfor %}
+
+    return status;
+}

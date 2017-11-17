@@ -8,24 +8,21 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-# MPI may not be required but NEURON sometimes needs to be initialized after
-# MPI so I am doing it here just to be safe (and to save me headaches in the
-# future)
-try:
-    from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
-except ImportError:
-    pass
-import os.path
+from __future__ import division
+from builtins import zip
 import collections
 from itertools import chain
 import operator
+import numpy
 import quantities as pq
+import sympy
 import neo
-from .code_gen import CodeGenerator, REGIME_VARNAME
-from neuron import h, load_mechanisms
+from ..code_gen import CodeGenerator
+from neuron import h
 from nineml import units as un
-from nineml.abstraction import EventPort
+from nineml.abstraction import EventPort, Dynamics
 from nineml.exceptions import NineMLNameError
+from nineml.visitors import BaseVisitorWithContext
 from math import pi
 from pype9.simulate.common.cells import base
 from pype9.simulate.neuron.units import UnitHandler
@@ -35,13 +32,10 @@ from pype9.annotations import (
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9UsageError, Pype9Unsupported9MLException)
-import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 NEURON_NS = 'NEURON'
-
-logger = logging.getLogger("PyPe9")
 
 
 class Cell(base.Cell):
@@ -56,9 +50,6 @@ class Cell(base.Cell):
     kwargs : dict(str, nineml.Property)
         A dictionary of properties
     """
-
-    UnitHandler = UnitHandler
-    Simulation = Simulation
 
     DEFAULT_CM = 1.0 * un.nF  # Chosen to match point processes (...I think).
 
@@ -104,7 +95,7 @@ class Cell(base.Cell):
                 setattr(self._hoc, self.cm_param_name,
                         float(self.DEFAULT_CM.in_units(un.nF)))
                 # Set capacitance in HOC section
-                specific_cm = (self.DEFAULT_CM / self.surface_area)
+                specific_cm = self.DEFAULT_CM / self.surface_area
                 self._sec.cm = float(specific_cm.in_units(un.uF / un.cm ** 2))
             self.recordable[self.component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS),
@@ -130,8 +121,8 @@ class Cell(base.Cell):
                 (self.build_component_class.index_of(p), p.name)
                 for p in self.build_component_class.event_receive_ports]
             # Get event receive ports sorted by the indices
-            sorted_ports = zip(
-                *sorted(ports_n_indices, key=operator.itemgetter(0)))[1]
+            sorted_ports = list(zip(
+                *sorted(ports_n_indices, key=operator.itemgetter(0))))[1]
         else:
             sorted_ports = []
         self.type = collections.namedtuple('Type', 'receptor_types')(
@@ -201,7 +192,7 @@ class Cell(base.Cell):
 
     def initialize(self):
         if self.in_array:
-            for k, v in self._initial_states.iteritems():
+            for k, v in self._initial_states.items():
                 self._set(k, v)
             assert self._regime_index is not None
             self._set_regime()
@@ -220,7 +211,9 @@ class Cell(base.Cell):
             try:
                 return getattr(self._sec, varname)
             except AttributeError:
-                assert False
+                raise Pype9UsageError(
+                    "'{}' doesn't have an attribute '{}'"
+                    .format(self.name, varname))
 
     def _set(self, varname, val):
         try:
@@ -234,12 +227,30 @@ class Cell(base.Cell):
                                                               un.cm ** 2))
         except LookupError:
             varname = self._escaped_name(varname)
-            setattr(self._sec, varname, val)
+            try:
+                setattr(self._sec, varname, val)
+            except AttributeError:
+                # Check to see if parameter has been removed in build
+                # transform and if not raise the error
+                if varname not in self.component_class.parameter_names:
+                    raise AttributeError(
+                        "Could not set '{}' to hoc object or NEURON section"
+                        .format(varname))
 
     def _set_regime(self):
-        setattr(self._hoc, REGIME_VARNAME, self._regime_index)
+        setattr(self._hoc, self.code_generator.REGIME_VARNAME, self._regime_index)
 
-    def record(self, port_name):
+    def record(self, port_name, **kwargs):  # @UnusedVariable
+        """
+        Parameters
+        ----------
+        port_name : str
+            Name of the port to record from
+        v_thresh_tol : Quantity (voltage)
+            A small voltage added to the threshold for determining emitted
+            spikes. Used when there is a voltage reset after the time crossing
+            that may cause the threshold to be missed.
+        """
         self._initialize_local_recording()
         # Get the port or state variable to record
         try:
@@ -255,10 +266,9 @@ class Cell(base.Cell):
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._hoc, None, sec=self._sec)
             else:
-                logger.warning("Assuming '{}' is voltage threshold crossing"
-                               .format(port_name))
+                v_thresh = self.get_v_threshold(self._nineml, port.name)
                 self._recorders[port_name] = recorder = h.NetCon(
-                    self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
+                    self._sec(0.5)._ref_v, None, v_thresh, 0.0, 0.0,
                     sec=self._sec)
             recorder.record(recording)
         else:
@@ -273,10 +283,12 @@ class Cell(base.Cell):
 
     def record_regime(self):
         self._initialize_local_recording()
-        self._recordings[REGIME_VARNAME] = recording = h.Vector()
-        recording.record(getattr(self._hoc, '_ref_{}'.format(REGIME_VARNAME)))
+        self._recordings[
+            self.code_generator.REGIME_VARNAME] = recording = h.Vector()
+        recording.record(getattr(self._hoc, '_ref_{}'
+                                 .format(self.code_generator.REGIME_VARNAME)))
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
@@ -285,36 +297,45 @@ class Cell(base.Cell):
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
-        t_stop = UnitHandler.to_pq_quantity(t_stop)
+        if t_start is None:
+            t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_start = pq.Quantity(t_start, 'ms')
+        t_stop = self.unit_handler.to_pq_quantity(t_stop)
         try:
             port = self.component_class.port(port_name)
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
+            events = numpy.asarray(self._recordings[port_name])
             recording = neo.SpikeTrain(
-                self._recordings[port_name], t_start=t_start,
+                self._trim_spike_train(events, t_start), t_start=t_start,
                 t_stop=t_stop, units='ms')
         else:
-            units_str = UnitHandler.dimension_to_unit_str(
+            units_str = self.unit_handler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
+            interval = h.dt * pq.ms
+            signal = numpy.asarray(self._recordings[port_name])
             recording = neo.AnalogSignal(
-                self._recordings[port_name], sampling_period=h.dt * pq.ms,
+                self._trim_analog_signal(signal, t_start, interval),
+                sampling_period=interval,
                 t_start=t_start, units=units_str, name=port_name)
-        return recording[:-1]
+            recording = recording[:-1]  # Drop final timepoint
+        return recording
 
     def _regime_recording(self):
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_start = self.unit_handler.to_pq_quantity(self._t_start)
         return neo.AnalogSignal(
-            self._recordings[REGIME_VARNAME], sampling_period=h.dt * pq.ms,
-            t_start=t_start, units='dimensionless', name=REGIME_VARNAME)
+            self._recordings[self.code_generator.REGIME_VARNAME],
+            sampling_period=h.dt * pq.ms,
+            t_start=t_start, units='dimensionless',
+            name=self.code_generator.REGIME_VARNAME)
 
     def reset_recordings(self):
         """
         Resets the recordings for the cell and the NEURON simulator (assumes
         that only one cell is instantiated)
         """
-        for rec in self._recordings.itervalues():
+        for rec in self._recordings.values():
             rec.resize(0)
 
     def clear_recorders(self):
@@ -347,8 +368,13 @@ class Cell(base.Cell):
                     "supported".format("', '".join(
                         [p.name
                          for p in self.component_class.event_receive_ports])))
+            if signal.t_start < 1.0:
+                raise Pype9UsageError(
+                    "Signal must start at or after 1 ms to handle delay in "
+                    "neuron ({})".format(signal.t_start))
+            times = numpy.asarray(signal.times.rescale(pq.ms)) - 1.0
             vstim = h.VecStim()
-            vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
+            vstim_times = h.Vector(times)
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             self._check_connection_properties(port_name, properties)
@@ -356,7 +382,7 @@ class Cell(base.Cell):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                vstim_con.weight[0] = self.UnitHandler.scale_value(
+                vstim_con.weight[0] = self.unit_handler.scale_value(
                     properties[0].quantity)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
@@ -370,7 +396,7 @@ class Cell(base.Cell):
             iclamp.dur = 1e12
             iclamp.amp = 0.0
             iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
-            iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
+            iclamp_times = h.Vector(signal.times.rescale(pq.ms))
             iclamp_amps.play(iclamp._ref_amp, iclamp_times)
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
@@ -418,7 +444,7 @@ class Cell(base.Cell):
                 raise Pype9Unsupported9MLException(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                netcon.weight[0] = self.UnitHandler.scale_value(
+                netcon.weight[0] = self.unit_handler.scale_value(
                     properties[0].quantity)
             self._input_auxs.append(netcon)
         elif receive_port.communicates == 'analog':
@@ -446,7 +472,7 @@ class Cell(base.Cell):
         seclamp.rs = series_resistance
         seclamp.dur1 = 1e12
         seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
-        seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
+        seclamp_times = h.Vector(voltages.times.rescale(pq.ms))
         seclamp_amps.play(seclamp._ref_amp, seclamp_times)
         self._inputs['seclamp'] = seclamp
         self._input_auxs.extend((seclamp_amps, seclamp_times))
@@ -458,6 +484,75 @@ class Cell(base.Cell):
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE)
         return name
 
+    @classmethod
+    def get_v_threshold(self, dynamics_properties, port_name):
+        """
+        Returns the voltage threshold at which an event is emitted from the
+        given event port
+
+        Parameters
+        ----------
+        component_class : nineml.Dynamics
+            The component class of the cell to find the v-threshold for
+        port_name : str
+            Name of the event send port to threshold
+        """
+        comp_class = (dynamics_properties.component_class.
+                      _dynamics.substitute_aliases())
+        transitions = OuputEventTransitionsFinder(
+            comp_class, comp_class.event_send_port(port_name)).transitions
+        assert transitions
+        try:
+            triggers = set(t.trigger for t in transitions)
+        except AttributeError:
+            raise Pype9UsageError(
+                "Cannot get threshold for event port '{}' in {} as it is "
+                "emitted from at least OnEvent transition ({})".format(
+                    port_name, comp_class,
+                    ', '.join(str(t) for t in transitions)))
+        if len(triggers) > 1:
+            raise Pype9UsageError(
+                "Cannot get threshold for event port '{}' in {} as it is the "
+                "condition from at least OnEvent transition ({})".format(
+                    port_name, comp_class, ', '.join(transitions)))
+        expr = next(iter(triggers)).rhs
+        v = sympy.Symbol(self.component_class.annotations.get(
+            (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE))
+        if v not in expr.free_symbols:
+            raise Pype9UsageError(
+                "Trigger expression for '{}' port in {} is not an expression "
+                "of membrane voltage '{}'".format(port_name, comp_class, v))
+        solution = None
+        if isinstance(expr, (sympy.StrictGreaterThan,
+                             sympy.StrictLessThan)):
+            # Get the equation for the transition between true and false
+            equality = sympy.Eq(*expr.args)
+            solutions = sympy.solvers.solve(equality, v)
+            if len(solutions) == 1:
+                solution = solutions[0]
+        if solution is None:
+            raise Pype9UsageError(
+                "Cannot solve threshold equation for trigger expression '{}' "
+                "for '{}' (to find condition where spikes are emitted from "
+                "'{}' event send port) in {} as it is not a simple inequality"
+                .format(expr, v, port_name, comp_class))
+        values = {}
+        for sym in solution.free_symbols:
+            sym_str = str(sym)
+            try:
+                prop = dynamics_properties.property(sym_str)
+            except NineMLNameError:
+                try:
+                    prop = comp_class.constant(sym_str)
+                except NineMLNameError:
+                    raise Pype9UsageError(
+                        "Cannot calculated fixed value for voltage threshold "
+                        "as it contains reference to {}".format(
+                            comp_class.element(sym_str)))
+            values[sym] = self.unit_handler.scale_value(prop.quantity)
+        threshold = solution.subs(values)
+        return float(threshold)
+
 
 class CellMetaClass(base.CellMetaClass):
 
@@ -466,10 +561,39 @@ class CellMetaClass(base.CellMetaClass):
     nineml_celltype_from_model
     """
 
-    _built_types = {}
+    _built_types = {}  # Stores previously created types for reuse
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
+    Simulation = Simulation
 
-    @classmethod
-    def load_libraries(cls, _, install_dir):
-        load_mechanisms(os.path.dirname(install_dir))
+
+class OuputEventTransitionsFinder(BaseVisitorWithContext):
+    """
+    Finds the transitions which emit an output event
+
+    Parameters
+    ----------
+    component_class : Dynamics
+        The component class to find the transitions from
+    port : EventSendPort
+        The event send port over which the events are emitted.
+    """
+
+    as_class = Dynamics
+
+    def __init__(self, component_class, port):
+        super(OuputEventTransitionsFinder, self).__init__()
+        self._port = port
+        self._transitions = []
+        self.visit(component_class)
+
+    @property
+    def transitions(self):
+        return self._transitions
+
+    def action_outputevent(self, outputevent, **kwargs):  # @UnusedVariable @IgnorePep8
+        if outputevent.port == self._port:
+            self._transitions.append(self.context.parent)
+
+    def default_action(self, obj, nineml_cls, **kwargs):
+        pass

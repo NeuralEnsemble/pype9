@@ -1,15 +1,15 @@
+from builtins import object
 from abc import ABCMeta, abstractmethod
 from nineml import units as un
 import numpy
 import time
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
-import logging
 from pyNN.random import NumpyRNG
+from future.utils import with_metaclass
+from pype9.utils.logging import logger
 
-logger = logging.getLogger('PyPe9')
 
-
-class Simulation(object):
+class Simulation(with_metaclass(ABCMeta, object)):
     """
     Base class of all simulation classes that prepares and runs the simulator
     kernel. All simulator objects must be created within the context of a
@@ -60,12 +60,11 @@ class Simulation(object):
         Options passed to the simulator-specific methods
     """
 
-    __metaclass__ = ABCMeta
-
     max_seed = 2 ** 32 - 1
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, properties_seed=None,
-                 min_delay=1 * un.ms, max_delay=10 * un.ms, **options):
+                 min_delay=1 * un.ms, max_delay=10 * un.ms,
+                 code_generator=None, build_base_dir=None, **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
         self._check_units('min_delay', dt, un.time, allow_none=True)
@@ -89,6 +88,17 @@ class Simulation(object):
                 "Provided structure seed {} is out of range, must be between "
                 "(0 and {})".format(seed, self.max_seed))
         self._base_properties_seed = properties_seed
+        if code_generator is None:
+            code_generator = self.CodeGenerator(base_dir=build_base_dir)
+        elif build_base_dir is not None:
+            raise Pype9UsageError(
+                "Cannot provide both code generator and 'build_base_dir' "
+                "options to Simulation __init__")
+        self._code_generator = code_generator
+
+    @property
+    def code_generator(self):
+        return self._code_generator
 
     def __enter__(self):
         self.activate()
@@ -217,7 +227,7 @@ class Simulation(object):
                                  size=self.num_threads()), dtype=int)
         self._global_seed = int(seed_gen_rng.uniform(low=0, high=self.max_seed,
                                                      size=1,))
-        self._properties_rng = NumpyRNG(self.properties_seed)
+        self._properties_rng = NumpyRNG(int(self.properties_seed))
 
     @property
     def derived_properties_seed(self):
@@ -279,12 +289,23 @@ class Simulation(object):
 
     @classmethod
     def gen_seed(cls):
-        return long(time.time())
+        return int(time.time())
 
     def register_cell(self, cell):
+        if cell.code_generator != self.code_generator:
+            raise Pype9UsageError(
+                "Equivlent code generators must be provided to both the "
+                "CellMetaClass and Simulation objects ({} and {})"
+                .format(cell.code_generator, self.code_generator))
         self._registered_cells.append(cell)
 
     def register_array(self, array):
+        cell_code_gen = array.celltype.model.code_generator
+        if cell_code_gen != self.code_generator:
+            raise Pype9UsageError(
+                "Equivlent code generators must be provided to both the "
+                "Network and Simulation objects ({} and {})"
+                .format(cell_code_gen, self.code_generator))
         self._registered_arrays.append(array)
 
     @classmethod

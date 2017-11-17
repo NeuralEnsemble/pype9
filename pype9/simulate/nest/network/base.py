@@ -16,7 +16,6 @@ if '--debug' in sys.argv:
         "'--debug' argument passed to script conflicts with an argument to "
         "nest, causing the import to stop at the NEST prompt")
 import pyNN.nest  # @IgnorePep8
-from nest import NESTError  # @IgnorePep8
 from pyNN.common.control import build_state_queries  # @IgnorePep8
 from pyNN.nest.standardmodels.synapses import StaticSynapse  # @IgnorePep8
 from pype9.simulate.common.network.base import (  # @IgnorePep8
@@ -25,7 +24,7 @@ from pype9.simulate.common.network.base import (  # @IgnorePep8
 import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
-from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
+from ..code_gen import CodeGenerator as CodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
 from ..simulation import Simulation  # @IgnorePep8
 
@@ -84,7 +83,7 @@ class Network(BaseNetwork):
     SelectionClass = Selection
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
-    CellCodeGenerator = CellCodeGenerator
+    CodeGenerator = CodeGenerator
     Simulation = Simulation
 
     @property

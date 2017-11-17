@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import object
 from itertools import chain
 
 
@@ -44,10 +45,11 @@ class PyNNCellWrapperMetaClass(type):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of
         # metaclasses).
-        component_class = dct['model'].component_class
+        model = dct['model']
+        component_class = model.component_class
         default_properties = dct['default_properties']  # @UnusedVariable
         initial_state = dct['initial_state']  # @UnusedVariable
-        initial_regime_index = dct['model'].regime_index(dct['initial_regime'])
+        initial_regime_index = model.regime_index(dct['initial_regime'])
         dct['model_name'] = celltype_id
         dct['parameter_names'] = tuple(component_class.parameter_names)
         dct['recordable'] = list(chain(('spikes',),
@@ -56,17 +58,17 @@ class PyNNCellWrapperMetaClass(type):
         dct['receptor_types'] = tuple(component_class.event_receive_port_names)
         # List units for each state variable
         dct['units'] = dict(
-            (sv.name, cls.UnitHandler.to_pq_quantity(
-                1 * cls.UnitHandler.dimension_to_units(sv.dimension)))
+            (sv.name, model.unit_handler.to_pq_quantity(
+                1 * model.unit_handler.dimension_to_units(sv.dimension)))
             for sv in component_class.state_variables)
         dct["default_parameters"] = dict(
             (p.name, (
-                cls.UnitHandler.scale_value(p.quantity)
+                model.unit_handler.scale_value(p.quantity)
                 if p.value.nineml_type == 'SingleValue' else float('nan')))
             for p in default_properties)
         dct["default_initial_values"] = dict(
             (i.name, (
-                cls.UnitHandler.scale_value(i.quantity)
+                model.unit_handler.scale_value(i.quantity)
                 if i.value.nineml_type == 'SingleValue' else float('nan')))
             for i in initial_state)
         dct['default_initial_values']['_regime'] = initial_regime_index

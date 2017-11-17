@@ -16,6 +16,10 @@ EXTERNAL_CURRENTS = 'ExternalCurrents'
 NO_TIME_DERIVS = 'StateVariablesThatHaveNoTimeDerivatives'
 NUM_TIME_DERIVS = 'NumberOfTimeDerivatives'
 
+# Discarded parameters
+DISCARDED = 'Discarded'
+DISCARD_PARAM = 'DiscardedParameter'
+
 # Transform information
 TRANSFORM_SRC = 'TransformSource'
 TRANSFORM_DEST = 'TransformDestination'
