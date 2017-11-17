@@ -63,7 +63,12 @@ else
 fi
 
 # Upgrade CMake (it doesn't find the right Python libraries with 2.8.12)
-pip install --upgrade cmake
+CMAKE_VERSION=$(cmake --version | awk '{print $3}')
+echo $CMAKE_VERSION
+if [ -z "$CMAKE_VERSION" ] || [ $(echo $CMAKE_VERSION | awk '{print $1 2}') -lt 34 ]; then 
+    echo "CMake version '{}' is not sufficient (>3.4), upgrading with pip"
+    pip install --upgrade cmake
+fi
 
 # Install cython
 pip install cython
