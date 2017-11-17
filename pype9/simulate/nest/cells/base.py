@@ -219,7 +219,6 @@ class Cell(base.Cell):
                      signal.times.rescale(pq.ms))) - self.device_delay_ms),
                  'start': t_start,
                  'stop': float(signal.t_stop.rescale(pq.ms))}
-            logger.info("Kernel: {}".format(nest.GetKernelStatus()))
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1, step_current_params)
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
