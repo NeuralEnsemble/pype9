@@ -82,23 +82,17 @@ Installation
 Pype9 works with either or both of the following simulator backends
 
 * Neuron_ >= 7.3
-* NEST_ == 2.10.0
-
-Note that NEST_ 2.12 is not currently supported (due to its module build system changing from
-*autotools* to *cmake*). A new Pype9 release will be made to support 2.12.
+* NEST_ >= 2.12.0
 
 Detailed instructions on how to install these simulators on different platforms
 can be found under Installation_ in the docs.
 
-*After* installing the simulator(s) you plan to use and ensuring that the
-commands ``nrnivmodl`` (for Neuron_) and ``nest-config`` (for NEST_) should
-be on your system path (https://en.wikipedia.org/wiki/PATH_(variable)), Pype9
-and its prerequisite Python packages can be installed with:
+*After* installing the simulator(s) you plan to use, Pype9 and its prerequisite
+Python packages, can be installed with:
 
 .. code-block:: bash
 
-   cd <pype9-repo-dir>
-   pip install -r requirements.txt .
+   pip install pype9
 
 
 Unsupported 9ML
@@ -107,19 +101,18 @@ Unsupported 9ML
 9ML aims to be a comprehensive description language for neural simulation. This
 means that it allows the expression of some uncommon configurations that are
 difficult to implement in Neuron_ and NEST_. Work is planned to make the NEURON
-and NEST pipelines in Pype9 support NineML_ fully, however until then the following
-restrictions apply to models that can be used with Pype9.
+and NEST pipelines in Pype9 support NineML_ fully, however until then the
+following restrictions apply to models that can be used with Pype9.
 
-* synapses must be linear (to be relaxed in v0.2)
+* synapses must be linear
 * synapses can only have one variable that varies over a projection (e.g.
-  weight) (to be relaxed in v0.2)
-* no analog connections between populations (i.e. gap junctions) (gap
-  junctions to be implemented in v0.2)
-* only one event send port per cell (current limitation of Neuron_/NEST_)
+  weight)
+* no recurrent analog connections between populations (e.g. gap junctions)
+* only one event send port per cell
 * names given to 9ML elements are not escaped and therefore can clash with
   built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
   keyword in Python). Please avoid using names that clash with C++ or Python
-  keywords (all 9ML names will be escaped in PyPe9 v0.2).
+  keywords (NB: This will be fixed in future versions).
 
 
 Reporting Issues
