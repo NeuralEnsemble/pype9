@@ -6,27 +6,14 @@ There are two steps to installing Pype9, the first is installing one or both of
 the simulator backends, Neuron_ and/or NEST_, and the second is installing
 Pype9 and prerequisite Python packages.
 
-
-.. note::
-
-    Pype9 currently only works with Python 2.7. Python 3 support is
-    planned for future versions.
-
-
 Simulator Backends
 ------------------
 Pype9 works with the following simulator backend versions
 
 * Neuron_ >= 7.3
-* NEST_ == 2.10.0
+* NEST_ >= 2.12.0
 
 The easiest way to install them depends on your operating system. 
-
-.. note::
-
-    Pype9 v0.1.0 does not work with the latest NEST_ version, 2.12,
-    as the build system was changed from autotools to cmake. A new release
-    (0.1.1) will be made to add NEST_ 2.12 support.
 
 on MacOS
 ^^^^^^^^
@@ -36,13 +23,14 @@ macports), so if you use a different package manager it may be better to
 install `from Source Code`_. 
 
 
-If you haven't already have configured a Python distribution on your system (or
-don't mind reinstalling your existing packages), I would recommend installing
-the standard Python distribution with Homebrew_ first
+If you haven't already have configured a Python distribution on your system,
+I would recommend installing the standard Python distribution with Homebrew_
+first. Pype9 is compatible with both Python 2 (2.7) and Python 3 (>3.4), so
+which one you choose is up to you.
 
 .. code-block:: bash
 
-   brew install python
+   brew install python3
    
 Neuron_ can be installed with Homebrew_ by
 
@@ -50,12 +38,24 @@ Neuron_ can be installed with Homebrew_ by
 
    brew install --with-mpi neuron
    
-Note that ``--with-mpi`` is optional but will enable you to spread your
-simulation over multiple compute cores/nodes of your computer.
+.. note:
+    The flag ``--with-mpi`` is note required but will enable you to spread your
+    simulation over multiple compute cores/nodes of your computer.
 
-Unfortunately, NEST_ 2.10, can no longer be installed via Homebrew_ as 2.12 is
-the latest version. Therefore, you will need to install it `from Source Code`_.
+   
+NEST_ can be installed with Homebrew_ by
 
+.. code-block:: bash
+
+   brew install nest
+   
+.. warning:
+    NEST currently doesn't install the source headers alongside the libraries
+    and Homebrew throws away the build directory after it is built, which means
+    that Pype9 is not able to find the appropriate headers to build custom
+    modules against. However, the currently open PR,
+    https://github.com/nest/nest-simulator/pull/844 should fix this.
+ 
 
 on Ubuntu/Debian
 ^^^^^^^^^^^^^^^^

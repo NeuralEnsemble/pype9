@@ -18,13 +18,18 @@
 #    from your host computer (i.e. outside of the container) and view the
 #    output figures from.
 #
-#  4. From inside the running container run the examples with
+#  4. From inside the running container, you will be able to run pype9, e.g.
 #
-#        python ~/examples/izhikevich.py --save_fig ~/output/<output-name>.pdf
+#        pype9 simulate \
+#	 	     ~/nineml-catalog/xml/neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
+#	 	     nest 500.0 0.001 \
+#	 	     --init_value v 65 mV \
+#	 	     --init_value m 0.0 unitless \
+#	 	     --init_value h 1.0 unitless \
+#	 	     --init_value n 0.0 unitless \
+#	 	     --record v ~/output/hh-v.neo.pkl
 #
-#    or 
-#
-#        python ~/examples/brunel.py --save_fig ~/output/<output-dir>
+#         pype9 plot ~/output/hh-v.neo.pkl --save ~/output/hh-v.png
 #
 #    Supply the '--help' option to see a full list of options for each example.
 #
@@ -32,35 +37,28 @@
 #     simulated models as desired.
 #
 
-FROM neuralensemble/simulation:py2
+FROM neuralensemble/simulationx
 MAINTAINER tom.g.close@gmail.com
 
-# Install LXML Python library
+# Install Python library
 USER root
-RUN apt-get update; apt-get install -y python-lxml
+RUN apt-get update; apt-get install -y python-lxml libhdf5-serial-dev \
+                                       libyaml-dev
 
 USER docker
 
-# Add a symbolic link to the modlunit command into the virtual env bin dir
-RUN ln -s $HOME/env/neurosci/x86_64/bin/modlunit $VENV/bin
+# Install 9ML Python
+RUN PATH=$PATH:$VENV/bin pip install git+https://github.com/INCF/nineml-python.git@pype9_port
 
-# Install the catalog via git clone (can be installed via pip but more convenient to have local version)
-RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
-WORKDIR $HOME/packages/ninemlcatalog
-RUN git checkout merging_with_master
+# Install 9ML catalog
+RUN git clone --branch merging_with_master https://github.com/INCF.git $HOME/nineml-catalog
+RUN PATH=$PATH:$VENV/bin pip install $HOME/nineml-catalog
 
-# Install PyPe9
-RUN echo "Installing Python 9ML library and Pype9"
-RUN PATH=$PATH:$VENV/bin $VENV/bin/pip install https://github.com/tclose/lib9ML/archive/develop.zip
-RUN PATH=$PATH:$VENV/bin $VENV/bin/pip install https://github.com/CNS-OIST/PyPe9/archive/master.zip
-
-# Create a link to the examples and catalog directories
-RUN ln -s $HOME/packages/ninemlcatalog/xml $HOME/catalog
+# Install Pype9
+RUN PATH=$PATH:$VENV/bin pip install git+https://github.com/NeuralEnsemble/pype9.git
 
 # Set up bashrc and add welcome message
-RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc
-RUN echo "source /home/docker/env/neurosci/bin/activate" >> $HOME/.bashrc
-RUN echo "export PYTHONPATH=$HOME/packages/ninemlcatalog:$PYTHONPATH" >> $HOME/.bashrc
+RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc; rm tmp;
 RUN echo "echo \"Type 'pype9 help' for instructions on how to run pype9\"" >> $HOME/.bashrc
 RUN echo "echo \"See $HOME/catalog for example 9ML models\"" >> $HOME/.bashrc
 
