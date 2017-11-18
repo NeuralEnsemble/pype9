@@ -30,9 +30,9 @@ addons:
 install:
   - install/nest.sh 2.14.0
   - install/neuron.sh tag-1665alpha
-  - pip install git+git://github.com/tclose/nineml-python.git
-  - pip install git+git://github.com/tclose/nineml-catalog.git
-  - pip install git+git://github.com/tclose/Diophantine.git
+  - pip install git+https://github.com/tclose/nineml-python.git
+  - pip install git+https://github.com/tclose/nineml-catalog.git
+  - pip install git+https://github.com/tclose/Diophantine.git
   - pip install -r requirements.txt
   - pip install coveralls
 script:
