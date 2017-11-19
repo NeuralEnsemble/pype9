@@ -21,7 +21,7 @@ packages = [p for p in find_packages() if not p.startswith('test.')]
 
 setup(
     name="pype9",
-    version="0.1a0",
+    version="0.2",
     package_data={package_name: package_data},
     scripts=[os.path.join('scripts', 'pype9')],
     packages=packages,
