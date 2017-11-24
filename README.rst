@@ -1,5 +1,5 @@
 Pype9
-*****
+=====
 
 .. image:: https://travis-ci.org/NeuralEnsemble/pype9.svg?branch=master
     :target: https://travis-ci.org/NeuralEnsemble/pype9
@@ -15,14 +15,55 @@ Pype9
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
 
-Overview
-========
-
 "PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines
-to simulate networks of neuron models described in NineML_ using either
-Neuron_ or NEST_ simulator backends.
+to simulate networks of neuron models described in NineML_ with various
+simulator backends.
 
-For example, given a cell model described in 9ML saved in
+
+Links
+-----
+
+* Documentation: http://pype9.readthedocs.org
+* Mailing list: `NeuralEnsemble Google Group`_
+* Issue tracker: https://github.com/NeuralEnsemble/pype9/issues
+
+
+Supported Simulators
+--------------------
+
+Pype9 works with either or both of the following simulator backends
+
+* Neuron_ >= 7.3
+* NEST_ >= 2.12.0
+
+Detailed instructions on how to install these simulators on different platforms
+can be found in the `Installation documentation`_.
+
+
+Unsupported NineML
+------------------
+
+NineML_ aims to be a comprehensive description language for neural simulation. This
+means that it allows the expression of some uncommon configurations that are
+difficult to implement in Neuron_ and NEST_. Work is planned to make the NEURON
+and NEST pipelines in Pype9 support NineML_ fully, however until then the
+following restrictions apply to models that can be used with Pype9.
+
+* synapses must be linear
+* synapses can only have one variable that varies over a projection (e.g.
+  weight)
+* no recurrent analog connections between populations (e.g. gap junctions)
+* only one event send port per cell
+* names given to NineML_ elements are not escaped and therefore can clash with
+  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
+  keyword in Python). Please avoid using names that clash with C++ or Python
+  keywords (NB: This will be fixed in future versions).
+
+
+Examples
+--------
+
+Given a cell model described in NineML_ saved in
 ``my_hodgkin_huxley.xml``, the simulator pipeline can run from the command line:
 
 .. code-block:: bash
@@ -44,7 +85,7 @@ or in a Python script
       sim.run(100.0 * un.ms)
    v = hh.recording('v')
    
-Pype9 also supports network models described in 9ML via integration with PyNN_
+Pype9 also supports network models described in NineML_ via integration with PyNN_
 
 .. code-block:: bash
    
@@ -72,60 +113,10 @@ See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pi
 
 In addition to the ``simulate`` command there is also a ``plot`` command for
 conveniently plotting the results of the simulation with Matplotlib_,
-and a ``convert`` command to convert 9ML files between different serialization
-formats (XML, YAML, JSON and HDF5) and 9ML versions (1.0 and 2.0dev). See the
+and a ``convert`` command to convert NineML_ files between different serialization
+formats (XML, YAML, JSON and HDF5) and NineML_ versions (1.0 and 2.0dev). See the
 documentation for details.
 
-
-Documentation
-=============
-The full Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest.
-
-
-Installation
-============
-
-Pype9 works with either or both of the following simulator backends
-
-* Neuron_ >= 7.3
-* NEST_ >= 2.12.0
-
-Detailed instructions on how to install these simulators on different platforms
-can be found in the `Installation documentation`_.
-
-*After* installing the simulator(s) you plan to use, Pype9 and its prerequisite
-Python packages, can be installed with:
-
-.. code-block:: bash
-
-   pip install pype9
-
-
-Unsupported 9ML
-===============
-
-9ML aims to be a comprehensive description language for neural simulation. This
-means that it allows the expression of some uncommon configurations that are
-difficult to implement in Neuron_ and NEST_. Work is planned to make the NEURON
-and NEST pipelines in Pype9 support NineML_ fully, however until then the
-following restrictions apply to models that can be used with Pype9.
-
-* synapses must be linear
-* synapses can only have one variable that varies over a projection (e.g.
-  weight)
-* no recurrent analog connections between populations (e.g. gap junctions)
-* only one event send port per cell
-* names given to 9ML elements are not escaped and therefore can clash with
-  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
-  keyword in Python). Please avoid using names that clash with C++ or Python
-  keywords (NB: This will be fixed in future versions).
-
-
-Reporting Issues
-================
-
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
 :license: MIT, see LICENSE for details.
