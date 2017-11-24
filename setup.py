@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import os
+import sys
 from setuptools import find_packages  # @UnresolvedImport
 from distutils.core import setup
 
@@ -18,10 +18,13 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 # Filter unittests from packages
 packages = [p for p in find_packages() if not p.startswith('test.')]
 
+sys.path.insert(0, package_dir)
+from version import __version__  # @IgnorePep8 @UnresolvedImport
+sys.path.pop(0)
 
 setup(
-    name="pype9",
-    version="0.2",
+    name=package_name,
+    version=__version__,
     package_data={package_name: package_data},
     scripts=[os.path.join('scripts', 'pype9')],
     packages=packages,
@@ -31,8 +34,7 @@ setup(
                  "neuron and neuron network 9ML (http://nineml.net) models "
                  "and simulate them using well-established simulator backends,"
                  " NEURON and NEST."),
-    long_description=open(os.path.join(os.path.dirname(__file__),
-                                       "README.rst")).read(),
+    long_description=open("README.rst").read(),
     license="MIT",
     keywords=("NineML pipeline computational neuroscience modeling "
               "interoperability XML YAML JSON HDF5 9ML neuron nest"),
@@ -40,7 +42,7 @@ setup(
     classifiers=['Development Status :: 4 - Beta',
                  'Environment :: Console',
                  'Intended Audience :: Science/Research',
-                 'License :: OSI Approved :: MIT',
+                 'License :: OSI Approved :: MIT License',
                  'Natural Language :: English',
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
@@ -49,4 +51,23 @@ setup(
                  'Programming Language :: Python :: 3.4',
                  'Programming Language :: Python :: 3.5',
                  'Programming Language :: Python :: 3.6',
-                 'Topic :: Scientific/Engineering'])
+                 'Topic :: Scientific/Engineering'],
+    install_requires=[
+        'sympy>=1.1',
+        'Jinja2>=2.6',
+        'docutils>=0.10',
+        'mock>=1.0',
+        'numpy>=1.5',
+        'quantities>=0.11.1',
+        'neo>=0.5.1',
+        'mpi4py>=1.3.1',
+        'pyNN>=0.9.1',
+        'diophantine>=0.2.0',
+        'PyYAML>=3.11',
+        'h5py>=2.7.0',
+        'future>=0.16'],
+     extra_requires={
+         'plot': 'matplotlib>=2.0'},
+     test_requires=['nose'],
+     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4'
+)

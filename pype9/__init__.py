@@ -7,6 +7,5 @@
 
 # Import mpi4py here so it is always imported before Neuron, as otherwise
 # Neuron can throw an error
+from .version import __version__
 from .utils.mpi import mpi_comm
-
-__version__ = "0.1"
