@@ -65,8 +65,7 @@ setup(
         'diophantine>=0.2.0',
         'PyYAML>=3.11',
         'h5py>=2.7.0',
-        'future>=0.16',
-        'pygments>=2.2.0'],
+        'future>=0.16'],
      extras_require={
          'plot': 'matplotlib>=2.0'},
      tests_require=['nose'],
