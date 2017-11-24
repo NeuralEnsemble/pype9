@@ -5,6 +5,12 @@ Pype9
     :target: https://travis-ci.org/NeuralEnsemble/pype9
 .. image:: https://coveralls.io/repos/github/NeuralEnsemble/pype9/badge.svg?branch=master
     :target: https://coveralls.io/github/NeuralEnsemble/pype9?branch=master
+.. image:: https://img.shields.io/pypi/pyversions/pype9.svg
+    :target: https://pypi.python.org/pypi/pype9/
+    :alt: Supported Python versions
+.. image:: https://img.shields.io/pypi/v/pype9.svg
+    :target: https://pypi.python.org/pypi/pype9/
+    :alt: Latest Version    
 .. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
