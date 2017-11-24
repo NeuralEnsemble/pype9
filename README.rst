@@ -91,7 +91,7 @@ Pype9 works with either or both of the following simulator backends
 * NEST_ >= 2.12.0
 
 Detailed instructions on how to install these simulators on different platforms
-can be found under Installation_ in the docs.
+can be found in the `Installation documentation`_.
 
 *After* installing the simulator(s) you plan to use, Pype9 and its prerequisite
 Python packages, can be installed with:
@@ -133,7 +133,7 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
 .. _Matplotlib: http://matplotlib.org
 .. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
-.. _Installation: http://pype9.readthedocs.io/en/latest/installation.html
+.. _`Installation documentation`: http://pype9.readthedocs.io/en/latest/installation.html
 .. _NineML: http://nineml.net
 .. _NEST: https://nest-simulator.org
 .. _Neuron: https://neuron.yale.edu.au
