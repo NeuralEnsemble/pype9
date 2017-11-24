@@ -4,6 +4,7 @@ dist: trusty
 matrix:
   include:
     - python: 2.7
+    - python: 3.4
     - python: 3.5
     - python: 3.6
 addons:
@@ -31,7 +32,7 @@ install:
   - install/nest.sh 2.14.0
   - install/neuron.sh tag-1665alpha
   - pip install -e .[plot]
-  - pip install coveralls
+  - pip install nose coveralls
 script:
   - nosetests test/unittests --with-coverage --cover-package=pype9
 after_success:
