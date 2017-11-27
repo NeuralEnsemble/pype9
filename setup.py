@@ -20,10 +20,10 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
          if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
 
 # Add compiled libninemlnrn to package data
-package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn',
+package_data.append(os.path.join('simulate', 'neuron', 'cells', 'code_gen', 'libninemlnrn',
                                  'libninemlnrn.so'))
 for fname in ('README',):  # 'nrnivmodl_path', 'modlunit_path', 'nest-config_path'):
-    package_data.append(os.path.join('base', 'cells', 'code_gen', 'paths',
+    package_data.append(os.path.join('simulate', 'common', 'cells', 'code_gen', 'paths',
                                      fname))
 
 # Filter unittests from packages
@@ -53,7 +53,7 @@ class build(_build):
         # NMODL mechanisms)
         print("Attempting to build libninemlnrn")
         libninemlnrn_dir = os.path.join(
-            self.build_package_dir, 'neuron', 'cells', 'code_gen',
+            self.build_package_dir, 'simulate', 'neuron', 'cells', 'code_gen',
             'libninemlnrn')
         try:
             cc = self.get_nrn_cc()
@@ -223,7 +223,7 @@ class build(_build):
         return exec_path
 
     def write_path(self, name, path):
-        save_path = os.path.join(self.build_package_dir, 'base', 'cells',
+        save_path = os.path.join(self.build_package_dir, 'simulate', 'common', 'cells',
                                  'code_gen', 'paths', name + '_path')
         with open(save_path, 'w') as f:
             f.write(path)
@@ -255,4 +255,22 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
+    install_requires=[
+        'nineml==0.1',
+        'ninemlcatalog==0.1',
+        'sympy==0.7.6',
+        'Jinja2>=2.6',
+        'docutils>=0.10',
+        'mock>1.0',
+        'numpy>=1.5',
+        'quantities>=0.11.1',
+        'lazyarray>=0.2.6',
+        'neo==0.4.1',
+        'mpi4py>=1.3.1',
+        'pyNN==0.8.2',
+        'diophantine>=0.1',
+        'matplotlib',
+        'pyaml',
+        'h5py'],
+    dependency_links=['https://github.com/tclose/nineml-python/tarball/0.2#egg=nineml-0.1'],
     cmdclass={'build': build})
