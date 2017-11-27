@@ -122,6 +122,7 @@ documentation for details.
 :license: MIT, see LICENSE for details.
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
+.. _`NeuralEnsemble Google Group`: https://groups.google.com/forum/#!forum/neuralensemble
 .. _Matplotlib: http://matplotlib.org
 .. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
 .. _`Installation documentation`: http://pype9.readthedocs.io/en/latest/installation.html
