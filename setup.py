@@ -30,10 +30,10 @@ setup(
     packages=packages,
     author="The PyPe9 Team (see AUTHORS)",
     author_email="tom.g.close@gmail.com",
-    description=("\"Python PipelinEs for 9ML (PyPe9)\" to manipulate "
-                 "neuron and neuron network 9ML (http://nineml.net) models "
-                 "and simulate them using well-established simulator backends,"
-                 " NEURON and NEST."),
+    description=(
+        "PYthon PipelinEs for 9ML (Pype9) is a collection of Python pipelines "
+        "for simulating networks of neuron models described in 9ML with various "
+        "simulator backends."),
     long_description=open("README.rst").read(),
     license="MIT",
     keywords=("NineML pipeline computational neuroscience modeling "
