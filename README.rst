@@ -1,22 +1,69 @@
 Pype9
-*****
+=====
 
 .. image:: https://travis-ci.org/NeuralEnsemble/pype9.svg?branch=master
     :target: https://travis-ci.org/NeuralEnsemble/pype9
 .. image:: https://coveralls.io/repos/github/NeuralEnsemble/pype9/badge.svg?branch=master
     :target: https://coveralls.io/github/NeuralEnsemble/pype9?branch=master
+.. image:: https://img.shields.io/pypi/pyversions/pype9.svg
+    :target: https://pypi.python.org/pypi/pype9/
+    :alt: Supported Python versions
+.. image:: https://img.shields.io/pypi/v/pype9.svg
+    :target: https://pypi.python.org/pypi/pype9/
+    :alt: Latest Version    
 .. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
 
-Overview
-========
-
 "PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines
-to simulate networks of neuron models described in NineML_ using either
-Neuron_ or NEST_ simulator backends.
+to simulate networks of neuron models described in NineML_ with various
+simulator backends.
 
-For example, given a cell model described in 9ML saved in
+
+Links
+-----
+
+* Documentation: http://pype9.readthedocs.org
+* Mailing list: `NeuralEnsemble Google Group`_
+* Issue tracker: https://github.com/NeuralEnsemble/pype9/issues
+
+
+Supported Simulators
+--------------------
+
+Pype9 works with either or both of the following simulator backends
+
+* Neuron_ >= 7.3
+* NEST_ >= 2.12.0
+
+Detailed instructions on how to install these simulators on different platforms
+can be found in the `Installation documentation`_.
+
+
+Unsupported NineML
+------------------
+
+NineML_ aims to be a comprehensive description language for neural simulation. This
+means that it allows the expression of some uncommon configurations that are
+difficult to implement in Neuron_ and NEST_. Work is planned to make the NEURON
+and NEST pipelines in Pype9 support NineML_ fully, however until then the
+following restrictions apply to models that can be used with Pype9.
+
+* synapses must be linear
+* synapses can only have one variable that varies over a projection (e.g.
+  weight)
+* no recurrent analog connections between populations (e.g. gap junctions)
+* only one event send port per cell
+* names given to NineML_ elements are not escaped and therefore can clash with
+  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
+  keyword in Python). Please avoid using names that clash with C++ or Python
+  keywords (NB: This will be fixed in future versions).
+
+
+Examples
+--------
+
+Given a cell model described in NineML_ saved in
 ``my_hodgkin_huxley.xml``, the simulator pipeline can run from the command line:
 
 .. code-block:: bash
@@ -38,7 +85,7 @@ or in a Python script
       sim.run(100.0 * un.ms)
    v = hh.recording('v')
    
-Pype9 also supports network models described in 9ML via integration with PyNN_
+Pype9 also supports network models described in NineML_ via integration with PyNN_
 
 .. code-block:: bash
    
@@ -66,67 +113,10 @@ See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pi
 
 In addition to the ``simulate`` command there is also a ``plot`` command for
 conveniently plotting the results of the simulation with Matplotlib_,
-and a ``convert`` command to convert 9ML files between different serialization
-formats (XML, YAML, JSON and HDF5) and 9ML versions (1.0 and 2.0dev). See the
+and a ``convert`` command to convert NineML_ files between different serialization
+formats (XML, YAML, JSON and HDF5) and NineML_ versions (1.0 and 2.0dev). See the
 documentation for details.
 
-
-Documentation
-=============
-The full Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest.
-
-
-Installation
-============
-
-Pype9 works with either or both of the following simulator backends
-
-* Neuron_ >= 7.3
-* NEST_ == 2.10.0
-
-Note that NEST_ 2.12 is not currently supported (due to its module build system changing from
-*autotools* to *cmake*). A new Pype9 release will be made to support 2.12.
-
-Detailed instructions on how to install these simulators on different platforms
-can be found under Installation_ in the docs.
-
-*After* installing the simulator(s) you plan to use and ensuring that the
-commands ``nrnivmodl`` (for Neuron_) and ``nest-config`` (for NEST_) should
-be on your system path (https://en.wikipedia.org/wiki/PATH_(variable)), Pype9
-and its prerequisite Python packages can be installed with:
-
-.. code-block:: bash
-
-   cd <pype9-repo-dir>
-   pip install -r requirements.txt .
-
-
-Unsupported 9ML
-===============
-
-9ML aims to be a comprehensive description language for neural simulation. This
-means that it allows the expression of some uncommon configurations that are
-difficult to implement in Neuron_ and NEST_. Work is planned to make the NEURON
-and NEST pipelines in Pype9 support NineML_ fully, however until then the following
-restrictions apply to models that can be used with Pype9.
-
-* synapses must be linear (to be relaxed in v0.2)
-* synapses can only have one variable that varies over a projection (e.g.
-  weight) (to be relaxed in v0.2)
-* no analog connections between populations (i.e. gap junctions) (gap
-  junctions to be implemented in v0.2)
-* only one event send port per cell (current limitation of Neuron_/NEST_)
-* names given to 9ML elements are not escaped and therefore can clash with
-  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
-  keyword in Python). Please avoid using names that clash with C++ or Python
-  keywords (all 9ML names will be escaped in PyPe9 v0.2).
-
-
-Reporting Issues
-================
-
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
 :license: MIT, see LICENSE for details.
@@ -134,7 +124,7 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
 .. _Matplotlib: http://matplotlib.org
 .. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
-.. _Installation: http://pype9.readthedocs.io/en/latest/installation.html
+.. _`Installation documentation`: http://pype9.readthedocs.io/en/latest/installation.html
 .. _NineML: http://nineml.net
 .. _NEST: https://nest-simulator.org
 .. _Neuron: https://neuron.yale.edu.au

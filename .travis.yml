@@ -4,7 +4,7 @@ dist: trusty
 matrix:
   include:
     - python: 2.7
-    - python: 3.5
+    - python: 3.4
     - python: 3.6
 addons:
   apt:
@@ -30,11 +30,8 @@ addons:
 install:
   - install/nest.sh 2.14.0
   - install/neuron.sh tag-1665alpha
-  - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
-  - pip install git+git://github.com/tclose/nineml-catalog.git@python3
-  - pip install git+git://github.com/tclose/Diophantine.git@master
-  - pip install -r requirements.txt
-  - pip install coveralls
+  - pip install -e .[plot]
+  - pip install nose coveralls
 script:
   - nosetests test/unittests --with-coverage --cover-package=pype9
 after_success:

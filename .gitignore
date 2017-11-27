@@ -11,8 +11,6 @@ x86_64
 *.spikes
 *.v
 .DS_Store
-.9build
-9build
 /test/data/nmodl/imported/*
 /test/data/xml/*.mod
 .project
@@ -45,3 +43,6 @@ autom4te.cache/
 *.gdf
 N6nineml8*E.dat
 /doc/build
+/build
+/dist
+pype9.egg-info
