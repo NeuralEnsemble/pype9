@@ -2,37 +2,25 @@
 Installation
 ============
 
-Pype9 can be installed from the `Python Package Index (PyPI)`_ with *pip*::
-
-    $ pip install pype9
-
-However, if you would like to use the *plot* command you will also need to 
-install matplotlib, which can be done by providing the *plot* option::
-
-    $ pip install pype9[plot]
-
-.. note: In order to run simulations in pype9 you will need to install one of
-         the supported simulator backends (see below).
+There two stages to installing Pype9: installing one or more of the simulator
+backends and installing the Pype9 package itself.
 
 Simulator Backends
 ------------------
+
 Pype9 works with the following simulator backend versions
 
 * Neuron_ >= 7.3
 * NEST_ >= 2.12.0
 
-The easiest way to install them depends on your operating system. 
+There are a few methods to install them, the  depends on your operating system. 
 
-.. warning: Make sure that you use the same Python version for the Python 
-            wrappers of the simulator backend that you used to install Pype9
+.. warning: Make sure that you use the same Python version when installing
+            the simulator backend that you use to install the Pype9 package.
 
 on MacOS
 ^^^^^^^^
 On macOS, NEST_ and Neuron_ can be installed via the Homebrew_ package manager.
-Note that it tends not to be a good idea to use multiple package managers (e.g.
-macports), so if you use a different package manager it may be better to
-install `from Source Code`_. 
-
 
 If you haven't already have configured a Python distribution on your system,
 I would recommend installing the standard Python distribution with Homebrew_
@@ -97,6 +85,23 @@ http://www.davison.webfactional.com/notes/installation-neuron-python/.
 
 In the ``prereq`` folder there are also scripts for installing the Neuron and
 NEST from source on a Ubuntu image, which may serve as a good reference.
+
+
+Python packages
+---------------
+ 
+Pype9 can be installed from the `Python Package Index (PyPI)`_ with *pip*::
+
+    $ pip install pype9
+
+However, if you would like to use the *plot* command you will also need to 
+install matplotlib, which can be done by providing the *plot* option::
+
+    $ pip install pype9[plot]
+
+.. note: In order to run simulations in pype9 you will need to install one of
+         the supported simulator backends (see below).
+
  
 .. _NineML: http://nineml.net
 .. _NeuroDebian: http://neuro.debian.net
