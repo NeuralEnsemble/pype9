@@ -23,7 +23,7 @@ User/Developer Guide
     cli
     scripting
     api
-    extending
+    developer
     unsupported
     getting_help
 
