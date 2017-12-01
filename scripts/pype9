@@ -25,4 +25,7 @@ args = parser.parse_args(sys.argv[1:2] if len(sys.argv) >= 2 else [])
 # Copy and clear sys.argv as it gets in the way of pyNEST import
 argv = copy(sys.argv[2:])
 del sys.argv[1:]
-getattr(pype9.cmd, args.cmd).run(argv)
+try:
+    getattr(pype9.cmd, args.cmd).run(argv)
+except Pype9UsageError as e:
+    print(e)
