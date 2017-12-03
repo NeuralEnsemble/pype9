@@ -14,6 +14,8 @@ from copy import copy
 from argparse import ArgumentParser
 import pype9.cmd
 from pype9.utils.logging import logger
+from pype9.exceptions import Pype9RuntimeError
+from nineml.exceptions import NineMLUsageError
 
 parser = ArgumentParser(__doc__)
 parser.add_argument('cmd', choices=pype9.cmd.help.all_cmds(),
@@ -26,7 +28,7 @@ argv = copy(sys.argv[2:])
 del sys.argv[1:]
 try:
     getattr(pype9.cmd, args.cmd).run(argv)
-except Pype9UsageError as e:
+except (NineMLUsageError, Pype9RuntimeError) as e:
     logger.error(e)
     sys.exit(1)  # Signal an error to the calling shell
 
