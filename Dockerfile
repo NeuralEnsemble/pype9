@@ -21,7 +21,7 @@
 #  4. From inside the running container, you will be able to run pype9, e.g.
 #
 #        pype9 simulate \
-#	 	     ~/nineml-catalog/xml/neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
+#	 	     ~/catalog/neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
 #	 	     nest 500.0 0.001 \
 #	 	     --init_value v 65 mV \
 #	 	     --init_value m 0.0 unitless \
@@ -37,29 +37,61 @@
 #     simulated models as desired.
 #
 
-FROM neuralensemble/simulationx
+FROM ubuntu:16.04
 MAINTAINER tom.g.close@gmail.com
 
-# Install Python library
-USER root
-RUN apt-get update; apt-get install -y python-lxml libhdf5-serial-dev \
-                                       libyaml-dev
+ENV DEBIAN_FRONTEND noninteractive
+ENV LANG=C.UTF-8
 
+RUN apt-get update; apt-get install -y build-essential autoconf automake libtool libreadline6-dev \
+    libncurses5-dev libgsl0-dev python-dev python3-dev python-numpy python-scipy python3-numpy \
+    python3-scipy openmpi-bin libopenmpi-dev inkscape libhdf5-serial-dev libyaml-dev python3-pip \
+    python-pip wget zip unzip flex bison vim nano emacs git
+
+# Update python packages
+RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade nose ipython virtualenvwrapper
+
+# Add non-root user
+RUN useradd -ms /bin/bash docker
+ENV HOME=/home/docker
+
+# Copy pype9 repo to docker container
+RUN mkdir -p $HOME/packages
+ADD . $HOME/packages/pype9
+RUN chown -R docker:docker $HOME/packages
+
+# Switch to non-root user
 USER docker
 
-# Install 9ML Python
-RUN PATH=$PATH:$VENV/bin pip install git+https://github.com/INCF/nineml-python.git@pype9_port
+# Set up virtualenv
+ENV VIRTUALENVWRAPPER_PYTHON /usr/bin/python3
+RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; mkvirtualenv pype9"
+ENV VENV_PIP /home/docker/.virtualenvs/pype9/bin/pip
 
-# Install 9ML catalog
-RUN git clone --branch merging_with_master https://github.com/INCF.git $HOME/nineml-catalog
-RUN PATH=$PATH:$VENV/bin pip install $HOME/nineml-catalog
+# Install Neuron and NEST
+RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/neuron.sh tag-1665alpha 3 $HOME/packages/neuron"
+RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/nest.sh 2.14.0 3 $HOME/packages/nest"
 
-# Install Pype9
-RUN PATH=$PATH:$VENV/bin pip install git+https://github.com/NeuralEnsemble/pype9.git
+# Install 9ML catalog as local git repo for easy editing
+RUN git clone https://github.com/INCF/nineml-catalog.git $HOME/packages/nineml-catalog
+RUN $VENV_PIP install -e $HOME/packages/nineml-catalog
+RUN ln -s $HOME/packages/nineml-catalog/ninemlcatalog $HOME/catalog
 
-# Set up bashrc and add welcome message
-RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc; rm tmp;
+# Install Pype9 package
+RUN $VENV_PIP install -e $HOME/packages/pype9[plot]
+
+# Set up bashrc vimrc and add welcome message
+RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc;
+RUN echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3"
+RUN echo "source /usr/local/bin/virtualenvwrapper.sh" >> $HOME/.bashrc
+RUN echo "workon pype9" >> $HOME/.bashrc
 RUN echo "echo \"Type 'pype9 help' for instructions on how to run pype9\"" >> $HOME/.bashrc
 RUN echo "echo \"See $HOME/catalog for example 9ML models\"" >> $HOME/.bashrc
+RUN echo "set background=dark" >> $HOME/.vimrc
+RUN echo "syntax on" >> $HOME/.vimrc
+RUN echo "set number" >> $HOME/.vimrc
+RUN echo "set autoindent" >> $HOME/.vimrc
 
+# Set work dir
 WORKDIR $HOME

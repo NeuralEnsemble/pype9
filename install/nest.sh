@@ -66,7 +66,7 @@ fi
 CMAKE_VERSION=$(cmake --version | awk '{print $3}')
 echo $CMAKE_VERSION
 if [ -z "$CMAKE_VERSION" ] || [ $(echo $CMAKE_VERSION | awk '{print $1 2}') -lt 34 ]; then 
-    echo "CMake version '{}' is not sufficient (>3.4), upgrading with pip"
+    echo "CMake version '$CMAKE_VERSION' is not sufficient (>3.4), upgrading with pip"
     pip install --upgrade cmake
 fi
 
@@ -107,9 +107,10 @@ popd
 
 # Create symlink from multiarch sub-directory to site-packages if required
 ARCH_SUBDIR=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', ''))");
-if [ ! -z "$ARCH_SUBDIR" ]; then
-    SHORT_PYVER=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
-    pushd $INSTALL_PREFIX/lib/python$SHORT_PYVER/site-packages
+SHORT_PYVER=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
+SITE_PKG_DIR=$INSTALL_PREFIX/lib/python$SHORT_PYVER/site-packages
+if [ ! -z "$ARCH_SUBDIR" && ! -d $SITE_PKG_DIR/nest ]; then
+    pushd $SITE_PKG_DIR
     ln -sf $INSTALL_PREFIX/lib/$ARCH_SUBDIR/python$SHORT_PYVER/site-packages/nest
     popd;
 fi

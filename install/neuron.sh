@@ -73,7 +73,7 @@ pushd $BUILD_DIR
 
 # Configure, make and install
 echo "Install Prefix: $INSTALL_PREFIX"
-CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$INSTALL_PREFIX --disable-rx3d --without-iv";
+CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$INSTALL_PREFIX --disable-rx3d --without-x";
 echo $CONFIG_CMD
 $CONFIG_CMD
 make -j8 -s;
