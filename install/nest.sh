@@ -21,6 +21,7 @@ fi
 echo "Using Python $PYTHON_VERSION"
 
 PYTHON=python$PYTHON_VERSION
+PIP=pip$PYTHON_VERSION
 
 if [ -z "$3" ]; then
     # Use virtualenv bin by default
@@ -67,12 +68,16 @@ CMAKE_VERSION=$(cmake --version | awk '{print $3}')
 echo $CMAKE_VERSION
 if [ -z "$CMAKE_VERSION" ] || [ $(echo $CMAKE_VERSION | awk '{print $1 2}') -lt 34 ]; then 
     echo "CMake version '$CMAKE_VERSION' is not sufficient (>3.4), upgrading with pip"
-    pip install --upgrade cmake
+    $PIP install --upgrade cmake
 fi
 
 # Install cython
-pip install cython
+$PIP install cython
 
+# Install scipy
+$PIP install numpy scipy
+
+# Make build dir
 mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
 
@@ -109,7 +114,7 @@ popd
 ARCH_SUBDIR=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', ''))");
 SHORT_PYVER=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
 SITE_PKG_DIR=$INSTALL_PREFIX/lib/python$SHORT_PYVER/site-packages
-if [ ! -z "$ARCH_SUBDIR" && ! -d $SITE_PKG_DIR/nest ]; then
+if [ ! -z "$ARCH_SUBDIR" ] && [ ! -d $SITE_PKG_DIR/nest ]; then
     pushd $SITE_PKG_DIR
     ln -sf $INSTALL_PREFIX/lib/$ARCH_SUBDIR/python$SHORT_PYVER/site-packages/nest
     popd;

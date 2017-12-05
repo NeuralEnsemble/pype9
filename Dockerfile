@@ -44,13 +44,12 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV LANG=C.UTF-8
 
 RUN apt-get update; apt-get install -y build-essential autoconf automake libtool libreadline6-dev \
-    libncurses5-dev libgsl0-dev python-dev python3-dev python-numpy python-scipy python3-numpy \
-    python3-scipy openmpi-bin libopenmpi-dev inkscape libhdf5-serial-dev libyaml-dev python3-pip \
-    python-pip wget zip unzip flex bison vim nano emacs git
+    libncurses5-dev libgsl0-dev python-dev python3-dev openmpi-bin libopenmpi-dev inkscape \
+    libhdf5-serial-dev libyaml-dev python3-pip python-pip wget zip unzip flex bison vim nano emacs git
 
 # Update python packages
 RUN pip3 install --upgrade pip
-RUN pip3 install --upgrade nose ipython virtualenvwrapper
+RUN pip3 install --upgrade virtualenvwrapper
 
 # Add non-root user
 RUN useradd -ms /bin/bash docker
@@ -67,11 +66,15 @@ USER docker
 # Set up virtualenv
 ENV VIRTUALENVWRAPPER_PYTHON /usr/bin/python3
 RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; mkvirtualenv pype9"
-ENV VENV_PIP /home/docker/.virtualenvs/pype9/bin/pip
+ENV VENV /home/docker/.virtualenvs/pype9
+ENV VENV_PIP $VENV/bin/pip
+
+# Install some useful Python packages into the virtualenv
+RUN $VENV_PIP install ipython nose
 
 # Install Neuron and NEST
-RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/neuron.sh tag-1665alpha 3 $HOME/packages/neuron"
-RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/nest.sh 2.14.0 3 $HOME/packages/nest"
+RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/nest.sh 2.14.0"
+RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOME/packages/pype9/install/neuron.sh tag-1665alpha"
 
 # Install 9ML catalog as local git repo for easy editing
 RUN git clone https://github.com/INCF/nineml-catalog.git $HOME/packages/nineml-catalog
@@ -80,6 +83,11 @@ RUN ln -s $HOME/packages/nineml-catalog/ninemlcatalog $HOME/catalog
 
 # Install Pype9 package
 RUN $VENV_PIP install -e $HOME/packages/pype9[plot]
+
+# Manually ensure that NMODL files have been compiled in PyNN installation
+WORKDIR $VENV/lib/python3.5/site-packages/pyNN/neuron/nmodl
+RUN $VENV/bin/nrnivmodl
+WORKDIR $HOME
 
 # Set up bashrc vimrc and add welcome message
 RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc;
@@ -92,6 +100,3 @@ RUN echo "set background=dark" >> $HOME/.vimrc
 RUN echo "syntax on" >> $HOME/.vimrc
 RUN echo "set number" >> $HOME/.vimrc
 RUN echo "set autoindent" >> $HOME/.vimrc
-
-# Set work dir
-WORKDIR $HOME
