@@ -28,11 +28,22 @@ Pype9 currently works with the following simulator backends
 
 There are various configurations in which to install them, with the
 best choice dependent on your operating system/development
-configuration and your own personal preference
+configuration and your own personal preference.
+
 
 .. warning: Make sure that you use the same Python installation for
             the simulator backend Python bindings as you use for
             the Pype9 package.
+ 
+Manual Installation from Source (Linux/MacOS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Detailed instructions on how to install NEST_ from source can be found
+on the official NEST website, http://www.nest-simulator.org/installation/,
+
+Good instructions on how to install Neuron_ from source can be found in
+Andrew Davisons notes here,
+http://www.davison.webfactional.com/notes/installation-neuron-python/.
 
 Homebrew/Linuxbrew (MacOS/Linux)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,10 +70,10 @@ The following options can be provided to the formula
             which is deleted after the build). In future versions of
             NEST this step will not be necessary.
  
-Note that this formula installs the Pype9 and all its Python
+Note that this formula installs the Pype9 package and all its Python
 dependencies in a virtual environment inside the Homebrew_ "cellar".
 Therefore, if you would like to access Pype9's Python API you should
-just install the Neuron_ and NEST_ dependencies via Homebrew_ and Pype9
+only install the Neuron_ and NEST_ dependencies via Homebrew_ and Pype9
 and its Python dependencies via Pip_::
 
    $ brew install --only-dependencies tclose/pype9/pype9
@@ -73,32 +84,30 @@ or for Python 3::
    $ brew install --only-dependencies tclose/pype9/pype9 --with-python3
    $ pip3 install pype9
    
-Please see [Python notes](https://docs.brew.sh/Homebrew-and-Python.html)
-for Homebrew_ for it handles Python, taking special note of the sections
-on bottling if not using MPI or Python 3. If you don't have a strong
-preference or an existing Python installation with the scientific stack
-installed (e.g. Enthought) I would recommend using a Homebrew_ Python
-installation (either 2 or 3, but probably 3 is best since support for
-Python 2 ends in 2020) for your scientific computing.
+Please see `the notes on how Homebrew handles MacOS's built in Python
+and multiple Python installations 
+<https://docs.brew.sh/Homebrew-and-Python.html>`, to ensure that you
+use the same installation for Neuron_, NEST_ and Pype9, taking special
+note of the sections on bottling if not using MPI or Python 3.
+
+If you don't have a strong preference or an existing Python
+installation with the scientific stack installed (e.g. Enthought) I
+would recommend using a Homebrew_ Python installation (either 2 or 3,
+but probably 3 is best since support for Python 2 ends in 2020) for
+scientific computing.
           
-.. note:: To set Hombrew_'s Python 2 to be the default Python used from
+.. note:: To set Hombrew's Python 2 to be the default Python used from
           your terminal add `/opt/brew/opt/python/libexec/bin` to your
           PATH variable.
           
-From Source (Linux/MacOS)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Install scripts (Linux/MacOS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Instructions on how to install NEST from source can be found on official
-NEST website, http://www.nest-simulator.org/installation/
-
-Good instructions on how to install Neuron from source can be found in
-Andrew Davisons notes here,
-http://www.davison.webfactional.com/notes/installation-neuron-python/.
-
-Alternatively, you can use the installation scripts used by Pype9 for
-continuous integration, which can be found in the `install` directory
-in the Pype9 repo. For example, to install NEST_ 2.14.0 with Python 3
-bindings with the install prefix `/opt/nest/2.14.0`::
+To install Neuron_ and NEST_ from source you can use the scripts that
+Pype9 uses to set up its automated testing environment, which can be
+found in the `install` directory of the Pype9 repo. For example, to
+install NEST_ 2.14.0 with Python 3 bindings to the prefix
+`/opt/nest/2.14.0`::
 
     $ wget https://raw.githubusercontent.com/tclose/pype9/develop/install/nest.sh
     $ ./nest.sh 2.14.0 3 /opt/nest/2.14.0
@@ -108,15 +117,16 @@ or Neuron_ 7.5::
     $ wget https://raw.githubusercontent.com/tclose/pype9/develop/install/neuron.sh
     $ ./neuron.sh 7.5 3 /opt/neuron/7.5
 
-These install scripts also work well within virtualenvs, installing NEST
-and Neuron to the virtualenv prefix, which is a convenient way to
-maintain different versions of Neuron_, NEST_ on your system. In this
-case the Python version and install prefix don't need to be supplied::
+These install scripts also work well within virtualenvs and install
+NEST_ and Neuron_ to the virtualenv prefix, which is a convenient way
+to maintain different versions of Neuron_, NEST_ on your system. In
+this case the Python version and install prefix don't need to be
+supplied to the install scripts::
 
     $ wget https://raw.githubusercontent.com/tclose/pype9/develop/install/nest.sh
     $ wget https://raw.githubusercontent.com/tclose/pype9/develop/install/neuron.sh
     $ pip install virtualenvwrapper
-    $ mkvirtualenv pype9
+    $ mkvirtualenv -p python3 pype9
     $ ./nest.sh 2.14.0
     $ ./neuron.sh 7.5
 
@@ -137,7 +147,8 @@ On Ubuntu, the installation requires the following packages
 * libhdf5-serial-dev
 * libyaml-dev
 
-Similar packages can be in other package managers (e.g. Homebrew_).  
+Similar packages can be found in other package managers on other
+distributions/systems (e.g. Homebrew_).
 
 Docker (Windows/Linux/MacOS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,10 +168,10 @@ https://hub.docker.com/r/tclose/pype9.
     $ docker run -v `pwd`/<your-local-output-dir>:/home/docker/output \
         -t -i tclose/pype9 /bin/bash
 
-  This will create a folder called `<your-local-output-dir>` in the
-  directory you are running the docker container, which you can access
-  from your host computer (i.e. outside of the container) and view the
-  output figures from.
+    This will create a folder called `<your-local-output-dir>` in the
+    directory you are running the docker container, which you can access
+    from your host computer (i.e. outside of the container) and view the
+    output figures from.
 
 #. From inside the running container, you will be able to run pype9,
    e.g.::
@@ -177,11 +188,12 @@ https://hub.docker.com/r/tclose/pype9.
     (pype9)docker@b3eca79b5209:~$ pype9 plot ~/output/hh-v.neo.pkl \
         --save ~/output/hh-v.png
 
-  Supply the `--help` option to see a full list of options for each
-  example.
+    Supply the `--help` option to see a full list of options for each
+    example.
 
 #. Edit the xml descriptions in the ~/catalog directory to alter the
  simulated models as desired.
+
 
 .. _NineML: http://nineml.net
 .. _NeuroDebian: http://neuro.debian.net
