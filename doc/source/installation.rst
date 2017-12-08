@@ -39,11 +39,10 @@ Manual Installation from Source (Linux/MacOS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Detailed instructions on how to install NEST_ can be found on the
-official `NEST website <http://www.nest-simulator.org/installation/>`.
+official `NEST website docs`.
 
 Good instructions on how to install Neuron_ from source can be found in
-`Andrew Davisons notes
-<http://www.davison.webfactional.com/notes/installation-neuron-python/>`.
+`Andrew Davisons notes`.
 
 Homebrew/Linuxbrew (MacOS/Linux)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,8 +84,7 @@ or for Python 3::
    $ pip3 install pype9
    
 Please see `the notes on how Homebrew handles MacOS's built in Python
-and multiple Python installations 
-<https://docs.brew.sh/Homebrew-and-Python.html>`, to ensure that you
+and multiple Python installations`, to ensure that you
 use the same installation for Neuron_, NEST_ and Pype9, taking special
 note of the sections on bottling if not using MPI or Python 3.
 
@@ -204,3 +202,6 @@ https://hub.docker.com/r/tclose/pype9.
 .. _Neuron: http://neuron.yale.edu
 .. _Enthought: https://www.enthought.com
 .. _`Python Package Index (PyPI)`: http://pypi.org
+.. _`the notes on how Homebrew handles MacOS's built in Python and multiple Python installations`: https://docs.brew.sh/Homebrew-and-Python.html
+.. _`Andrew Davisons notes`: http://www.davison.webfactional.com/notes/installation-neuron-python/
+.. _`NEST website docs` : http://www.nest-simulator.org/installation/
