@@ -38,12 +38,12 @@ configuration and your own personal preference.
 Manual Installation from Source (Linux/MacOS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Detailed instructions on how to install NEST_ from source can be found
-on the official NEST website, http://www.nest-simulator.org/installation/,
+Detailed instructions on how to install NEST_ can be found on the
+official `NEST website <http://www.nest-simulator.org/installation/>`.
 
 Good instructions on how to install Neuron_ from source can be found in
-Andrew Davisons notes here,
-http://www.davison.webfactional.com/notes/installation-neuron-python/.
+`Andrew Davisons notes
+<http://www.davison.webfactional.com/notes/installation-neuron-python/>`.
 
 Homebrew/Linuxbrew (MacOS/Linux)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
