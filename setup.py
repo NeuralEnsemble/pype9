@@ -31,9 +31,9 @@ setup(
     author="The PyPe9 Team (see AUTHORS)",
     author_email="tom.g.close@gmail.com",
     description=(
-        "PYthon PipelinEs for 9ML (Pype9) is a collection of Python pipelines "
-        "for simulating networks of neuron models described in 9ML with various "
-        "simulator backends."),
+        "PYthon PipelinEs for 9ML (Pype9) is a collection of Python "
+        "pipelines for simulating networks of neuron models described "
+        " in 9ML with various simulator backends."),
     long_description=open("README.rst").read(),
     license="MIT",
     keywords=("NineML pipeline computational neuroscience modeling "
@@ -69,8 +69,8 @@ setup(
         'PyYAML>=3.11',
         'h5py>=2.7.0',
         'future>=0.16'],
-     extras_require={
-         'plot': 'matplotlib>=2.0'},
-     tests_require=['nose'],
-     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4'
+    extras_require={
+        'plot': 'matplotlib>=2.0'},
+    tests_require=['nose'],
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4'
 )
