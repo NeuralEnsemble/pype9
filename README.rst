@@ -33,8 +33,8 @@ Supported Simulators
 
 Pype9 works with either or both of the following simulator backends
 
-* Neuron_ >= 7.3
-* NEST_ >= 2.12.0
+* Neuron_ >= 7.5
+* NEST_ >= 2.14.0
 
 Detailed instructions on how to install these simulators on different platforms
 can be found in the `Installation documentation`_.
