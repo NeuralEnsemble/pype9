@@ -68,6 +68,7 @@ setup(
         'diophantine>=0.2.0',
         'PyYAML>=3.11',
         'h5py>=2.7.0',
+        'lxml>=3.7.3',
         'future>=0.16'],
     extras_require={
         'plot': 'matplotlib>=2.0'},
