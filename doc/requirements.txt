@@ -1,5 +1,5 @@
 # requirements file for readthedocs.org
-lxml
+lxml>=3.7.3
 sympy==0.7.6
 Jinja2>=2.6
 docutils>=0.10
@@ -14,4 +14,4 @@ matplotlib
 numpydoc>=0.6.0
 sphinx-argparse>=0.2.0
 nineml>=1.0
---no-deps .
+pype9>=0.2
