@@ -65,7 +65,7 @@ setup(
         'mpi4py>=1.3.1',
         'pyNN>=0.9.1',
         'lazyarray>=0.2.7',
-        'diophantine>=0.2.0',
+        'Diophantine>=0.2.0',
         'PyYAML>=3.11',
         'h5py>=2.7.0',
         'lxml>=3.7.3',
