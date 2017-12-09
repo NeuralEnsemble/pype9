@@ -39,7 +39,7 @@ Single Cell Simulations
 CodeGenerator
 ^^^^^^^^^^^^^
 
-* generate_source_files
+* :meth:`pype9.simulate.common.code_gen.CodeGenerator.generate_source_files`
 * configure_build_files
 * compile_source_files
 * clean_src_dir
