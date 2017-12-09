@@ -15,17 +15,10 @@ import sys
 import os
 import shlex
 import mock
-from unittest.mock import MagicMock
 import sphinx_rtd_theme
 
 package_path = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-            return MagicMock()
 
 
 class MockMPI4PyModule(mock.Mock):
