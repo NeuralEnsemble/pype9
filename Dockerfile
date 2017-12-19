@@ -45,7 +45,7 @@ ENV LANG=C.UTF-8
 
 RUN apt-get update; apt-get install -y build-essential autoconf automake libtool libreadline6-dev \
     libncurses5-dev libgsl0-dev python-dev python3-dev openmpi-bin libopenmpi-dev inkscape \
-    libhdf5-serial-dev libyaml-dev python3-pip python-pip wget zip unzip flex bison vim nano emacs git
+    libhdf5-serial-dev libyaml-dev python3-pip python3-tk python-pip wget zip unzip flex bison vim nano emacs git
 
 # Update python packages
 RUN pip3 install --upgrade pip
@@ -88,6 +88,10 @@ RUN $VENV_PIP install -e $HOME/packages/pype9[plot]
 WORKDIR $VENV/lib/python3.5/site-packages/pyNN/neuron/nmodl
 RUN $VENV/bin/nrnivmodl
 WORKDIR $HOME
+
+# Set up matplotlib environemnt
+RUN mkdir -p .config/matplotlib
+RUN echo "backend: Agg" >> .config/matplotlib/matplotlibrc
 
 # Set up bashrc vimrc and add welcome message
 RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc;
