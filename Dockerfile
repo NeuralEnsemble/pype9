@@ -79,7 +79,7 @@ RUN /bin/bash -c "source /usr/local/bin/virtualenvwrapper.sh; workon pype9; $HOM
 # Install 9ML catalog as local git repo for easy editing
 RUN git clone https://github.com/INCF/nineml-catalog.git $HOME/packages/nineml-catalog
 RUN $VENV_PIP install -e $HOME/packages/nineml-catalog
-RUN ln -s $HOME/packages/nineml-catalog/ninemlcatalog $HOME/catalog
+RUN ln -s $HOME/packages/nineml-catalog/ninemlcatalog/catalog $HOME/catalog
 
 # Install Pype9 package
 RUN $VENV_PIP install -e $HOME/packages/pype9[plot]
