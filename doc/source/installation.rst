@@ -177,7 +177,7 @@ output figures from.
    e.g.::
 
     (pype9)docker@b3eca79b5209:~$ pype9 simulate \
-        ~/catalog/neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
+        ~/catalog/neuron/HodgkinHuxley.xml#PyNNHodgkinHuxleyProperties \
         nest 500.0 0.001 \
         --init_value v 65 mV \
         --init_value m 0.0 unitless \
