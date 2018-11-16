@@ -213,12 +213,12 @@ class Cell(base.Cell):
                     "be greater than device delay ({})".format(
                         port_name, signal.t_start, self.device_delay))
             step_current_params = {
-                 'amplitude_values': list(
+                'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.ravel(numpy.asarray(
-                     signal.times.rescale(pq.ms))) - self.device_delay_ms),
-                 'start': t_start,
-                 'stop': float(signal.t_stop.rescale(pq.ms))}
+                'amplitude_times': list(numpy.ravel(numpy.asarray(
+                    signal.times.rescale(pq.ms))) - self.device_delay_ms),
+                'start': t_start,
+                'stop': float(signal.t_stop.rescale(pq.ms))}
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1, step_current_params)
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
