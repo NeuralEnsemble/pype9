@@ -127,8 +127,9 @@ class Synapse(BaseALObject, ContainerObject):
     nineml_child = {'dynamics': None}
     nineml_children = (AnalogPortConnection, EventPortConnection)
 
-    def __init__(self, name, dynamics, port_connections=None,
-                 analog_port_connections=None, event_port_connections=None):
+    def __init__(self, name, dynamics=None, port_connections=None,
+                 analog_port_connections=None,
+                 event_port_connections=None):
         super(Synapse, self).__init__()
         ContainerObject.__init__(self)
         self._name = validate_identifier(name)
