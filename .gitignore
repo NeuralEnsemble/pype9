@@ -46,3 +46,5 @@ N6nineml8*E.dat
 /build
 /dist
 pype9.egg-info
+.pytest_cache
+.history
